@@ -48,5 +48,28 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<!-- Camera permission -->
+	<key>NSCameraUsageDescription</key>
+	<string>Medical Binder needs camera access to scan your medical documents</string>
+
+	<!-- Microphone permission (needed for video recording) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Medical Binder needs microphone access when recording video of medical procedures</string>
+
+	<!-- Photo library permission (for saving scanned documents) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Medical Binder needs access to save scanned documents to your photo library</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Medical Binder needs permission to save scanned documents to your photo library</string>
+
+	<!-- File system permissions -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+
+	<!-- Optional: Face ID for securing sensitive medical data -->
+	<!-- <key>NSFaceIDUsageDescription</key>
+	<string>Medical Binder requires Face ID to securely access your medical records</string> -->
 </dict>
 </plist>
