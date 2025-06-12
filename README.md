@@ -1,97 +1,259 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# MedicalBinder
 
-# Getting Started
+A React Native iOS app for secure, self-custodial medical data management using MGit (medical git) with Nostr authentication. This app enables patients to maintain complete control over their medical records through distributed version control.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Overview
 
-## Step 1: Start Metro
+MedicalBinder integrates with the `react-native-mgit` module to provide:
+- Self-custodial medical record storage
+- Version control for medical data using MGit
+- Nostr-based authentication and commit signing
+- Offline-first medical record access
+- Secure synchronization across devices
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Prerequisites
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+Make sure you have completed the [React Native development environment setup](https://reactnative.dev/docs/set-up-your-environment) for iOS development.
 
-```sh
-# Using npm
-npm start
+Required tools:
+- Node.js (v18+)
+- Xcode (latest stable)
+- CocoaPods (`sudo gem install cocoapods`)
+- Expo CLI (`npm install -g @expo/cli`)
+- Yarn package manager
 
-# OR using Yarn
-yarn start
+## Project Setup Notes
+
+This project was created with React Native 0.79.3 and uses modern Expo CLI build tools instead of the deprecated direct CocoaPods workflow.
+
+### Key Setup Details:
+- **React Native**: 0.79.3 (latest)
+- **Package Manager**: Yarn (yarn.lock present)
+- **Build Tool**: Expo CLI (`npx expo run:ios`)
+- **JavaScript Engine**: Hermes (enabled by default)
+- **Architecture**: Classic React Native (not New Architecture)
+
+## Getting Started
+
+### 1. Install Dependencies
+
+```bash
+yarn install
 ```
 
-## Step 2: Build and run your app
+### 2. Install iOS Dependencies
+CocoaPods dependencies are automatically managed by Expo CLI, but if needed:
+```bash
+cd ios
+pod install
+cd ..
+```
+Note: React Native is moving away from direct pod install usage. The preferred method is through Expo CLI.
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+### 3. Start the Development Server & Run iOS
+#### Option A: Single Command (Recommended)
+```bash
+npx expo run:ios
 ```
 
-### iOS
+This automatically starts Metro bundler and builds/runs the app.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+#### Option B: Separate Metro Process
+```bash
+# Terminal 1: Start Metro
+npx react-native start --reset-cache
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+# Terminal 2: Build and run
+npx expo run:ios --no-bundler
 ```
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
+#### Option C: Using Yarn
+```bash
 yarn ios
 ```
+### 4. Development Workflow
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+The app will open in iOS Simulator automatically
+Metro bundler provides hot reloading for development
+Use `npx expo run:ios` for clean builds
+For Metro issues, use `npx react-native start --reset-cache`
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Project Structure
+```
+MedicalBinder/
+├── App.tsx                 # Main app component
+├── index.js               # App entry point
+├── package.json           # Dependencies and scripts
+├── yarn.lock             # Yarn lockfile
+├── ios/                  # iOS native project
+│   ├── MedicalBinder.xcworkspace  # Open this in Xcode (not .xcodeproj)
+│   ├── Podfile           # CocoaPods configuration
+│   └── Podfile.lock      # CocoaPods lockfile
+├── android/              # Android native project
+└── .expo/               # Expo CLI configuration
+```
 
-## Step 3: Modify your app
+# MGit Integration
+This app integrates with the `react-native-mgit` module to provide:
 
-Now that you have successfully run the app, let's make changes!
+Git-based medical record versioning
+Nostr public key authentication
+Commit signing with medical data attribution
+Repository cloning and synchronization
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## MGit Features:
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+mgit init - Initialize medical record repository
+mgit clone - Clone existing medical repositories
+mgit commit - Create commits with Nostr signature
+mgit sync - Synchronize across devices securely
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+# Development Notes
+## Build System Changes
+React Native 0.79+ uses Expo CLI as the recommended build tool instead of direct CocoaPods:
+==================== DEPRECATION NOTICE =====================
+Calling `pod install` directly is deprecated in React Native
+because we are moving away from Cocoapods toward alternative
+solutions to build the project.
+* If you are using the Community CLI, please run:
+`npx expo run:ios`
+=============================================================
+## Hermes JavaScript Engine
+This project uses Hermes for improved performance. If you encounter JavaScript engine issues:
 
-## Congratulations! :tada:
+Try clearing Metro cache: npx react-native start --reset-cache
+If problems persist, Hermes can be disabled in ios/Podfile
 
-You've successfully run and modified your React Native App. :partying_face:
 
-### Now what?
+## Common Issues
+### Metro bundler issues:
+```bash
+npx react-native start --reset-cache
+```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+### Build issues:
+```bash
+cd ios
+pod install
+cd ..
+npx expo run:ios
+```
+
+### Xcode workspace:
+Always open ios/MedicalBinder.xcworkspace in Xcode, not the .xcodeproj file.
+
+## Development Workflow
+
+Due to compatibility issues between React Native 0.79.3 and Expo SDK 53, the most reliable development workflow requires running Metro bundler and the build process in separate terminals.
+
+### Two-Terminal Development Setup
+
+This project uses a two-terminal approach for reliable development:
+
+**Terminal 1: Metro Bundler (Keep Running)**
+```bash
+yarn dev
+```
+
+This starts Metro with cache reset and keeps it running throughout your development session.
+#### Terminal 2: Build & Run (Restart as Needed)
+```bash
+yarn build:ios
+```
+This builds and launches the app, connecting to the Metro instance from Terminal 1.
+
+#### Package.json Scripts
+The following scripts are configured for the two-terminal workflow:
+```json
+{
+  "scripts": {
+    "dev": "react-native start --reset-cache",
+    "build:ios": "expo run:ios", 
+    "start": "react-native start",
+    "ios": "react-native run-ios"
+  }
+}
+```
+### Complete Development Workflow
+
+Initial Setup (Terminal 1):
+```bash
+yarn dev
+```
+
+Keep this terminal running throughout your development session. You'll see Metro bundler output and should see:
+Metro waiting on http://localhost:8081
+
+Build and Run (Terminal 2):
+```bash
+yarn build:ios
+```
+
+This will build the app and open it in iOS Simulator. You can restart this command as needed without affecting Metro.
+Development Iteration:
+
+Keep Terminal 1 (Metro) running
+Make code changes in your editor
+App will hot reload automatically
+If you need a clean build, restart Terminal 2 only
+If you encounter bundling issues, restart Terminal 1
+
+# Contributing
+When contributing to this project:
+
+Use yarn for package management (not npm)
+Test on iOS Simulator before submitting PRs
+Ensure MGit integration works with any changes
+Follow React Native 0.79+ best practices
 
 # Troubleshooting
+## Development Issues
+If the app shows a red error screen:
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+Check Terminal 1 for Metro errors
+Restart Terminal 2: yarn build:ios
 
-# Learn More
+If you get "Metro bundler is not running":
 
-To learn more about React Native, take a look at the following resources:
+Make sure Terminal 1 is still running yarn dev
+Check that Metro shows "waiting on http://localhost:8081"
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+If you get JavaScript bundle errors:
+
+Restart Terminal 1: Stop with Ctrl+C, then yarn dev
+Wait for Metro to fully start, then restart Terminal 2
+
+### Clean restart everything:
+```bash
+# Terminal 1: Stop Metro (Ctrl+C), then:
+yarn dev
+
+# Terminal 2: Wait for Metro to start, then:
+yarn build:ios
+```
+### Why Two Terminals?
+This workflow is necessary due to Metro bundler timing issues in React Native 0.79.3 + Expo SDK 53. When expo run:ios tries to start its own Metro instance, there are initialization conflicts that cause the "Property 'require' doesn't exist" runtime error.
+By pre-starting Metro in a separate terminal, we ensure:
+
+Metro is fully initialized before the app launches
+Stable JavaScript bundle serving
+Reliable hot reloading during development
+Faster subsequent builds (Metro stays warm)
+
+Single Terminal Alternative (Unreliable)
+While npx expo run:ios should work in a single terminal, it currently has reliability issues. If you want to try it:
+```bash
+npx expo run:ios
+```
+If you encounter runtime errors, fall back to the two-terminal approach above.
+
+## Common Solutions:
+
+Clear Metro cache: npx react-native start --reset-cache
+Clean iOS build: cd ios && pod install && cd ..
+Reset Expo cache: npx expo start --clear
+Restart Metro: Stop all processes and run npx expo run:ios
+
+For more help, see the React Native troubleshooting docs.
+License
+This project is part of the MGit ecosystem for self-custodial medical data management.
