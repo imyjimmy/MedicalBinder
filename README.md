@@ -51,7 +51,7 @@ cd ..
 Note: React Native is moving away from direct pod install usage. The preferred method is through Expo CLI.
 
 ### 3. Start the Development Server & Run iOS
-#### Option A: Single Command (Recommended)
+#### Option A: Single Command (Buggy)
 ```bash
 npx expo run:ios
 ```
