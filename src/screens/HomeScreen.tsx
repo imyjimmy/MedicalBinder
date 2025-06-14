@@ -1,5 +1,7 @@
+import { NativeModules } from 'react-native';
 import React, {useState} from 'react';
 import {
+  Button,
   View,
   Text,
   TouchableOpacity,
@@ -9,6 +11,41 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import MGitService from '../services/MGitService';
+
+const testMGitIntegration = () => {
+  try {
+    if (NativeModules.MGitModule) {
+      // Test the actual setupMgitBinary method (the one that calls the real binary setup)
+      NativeModules.MGitModule.setupMgitBinary()
+        .then(result => {
+          Alert.alert('Real Setup Success!', JSON.stringify(result));
+          
+          // If that works, test clone method too
+          const testClone = () => {
+            NativeModules.MGitModule.clone(
+              'https://example.com/test.git',
+              '/tmp/test',
+              { token: 'test-token' }
+            )
+            .then(cloneResult => {
+              Alert.alert('Clone Test Result', JSON.stringify(cloneResult));
+            })
+            .catch(cloneError => {
+              Alert.alert('Clone Test Error', cloneError.toString());
+            });
+          };
+          
+          // Call clone test after a delay
+          setTimeout(testClone, 1000);
+        })
+        .catch(error => {
+          Alert.alert('Real Setup Error', error.toString());
+        });
+    }
+  } catch (error) {
+    Alert.alert('Error', error.toString());
+  }
+};
 
 const HomeScreen: React.FC = () => {
   const [mgitStatus, setMgitStatus] = useState<string>('Not tested');
@@ -33,7 +70,7 @@ const HomeScreen: React.FC = () => {
       <ScrollView contentInsetAdjustmentBehavior="automatic">
         <View style={styles.content}>
           <Text style={styles.title}>MedicalBinder MVP</Text>
-          <Text style={styles.subtitle}>Hello World with MGit</Text>
+          <Text style={styles.subtitle}>Hello World with MGit!!!</Text>
           
           <View style={styles.statusContainer}>
             <Text style={styles.statusLabel}>MGit Status:</Text>
@@ -44,16 +81,16 @@ const HomeScreen: React.FC = () => {
               {mgitStatus}
             </Text>
           </View>
-
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={testMGitConnection}
             disabled={isLoading}
-          >
-            <Text style={styles.buttonText}>
+          > */}
+            {/* <Text style={styles.buttonText}>
               {isLoading ? 'Testing...' : 'Test MGit Module'}
-            </Text>
-          </TouchableOpacity>
+            </Text> */}
+          <Button title="Test MGit Integration" onPress={testMGitIntegration} />
+          {/* </TouchableOpacity> */}
 
           <View style={styles.infoContainer}>
             <Text style={styles.infoTitle}>About MGit</Text>
