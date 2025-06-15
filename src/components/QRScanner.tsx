@@ -134,15 +134,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     return null;
   };
 
+  // remember: Usage: mgit clone [-jwt <token>] <url> [destination]
   const handleClone = async (repoData: GitRepoData) => {
     const localPath = `/tmp/repos/${repoData.name}`;
     const options = repoData.token ? { token: repoData.token } : {};
     
-    // Build the command string for display
-    let commandString = `mgit clone "${repoData.url}" "${localPath}"`;
+    // Build the CORRECT command string for display
+    let commandString = `mgit clone`;
     if (repoData.token) {
-      commandString += ` --token="${repoData.token}"`;
+      commandString += ` -jwt ${repoData.token}`;
     }
+    commandString += ` "${repoData.url}" "${localPath}"`;
     
     // Show the command in an alert
     Alert.alert(
@@ -160,13 +162,43 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
   const executeClone = async (repoData: GitRepoData, localPath: string, options: any) => {
     try {
+      // Log start
+      console.log('🚀 Starting MGit clone...');
+      console.log('📊 Clone parameters:', {
+        url: repoData.url,
+        localPath: localPath,
+        hasToken: !!options.token,
+        tokenLength: options.token?.length || 0
+      });
+      
+      Alert.alert('Debug', `Starting clone:\nURL: ${repoData.url}\nPath: ${localPath}\nToken: ${options.token ? 'Present' : 'Missing'}`);
+      
       await NativeModules.MGitModule.clone(repoData.url, localPath, options);
+      
+      console.log('✅ MGit clone completed successfully');
+      Alert.alert('Success', 'MGit clone completed!');
+      
       onScanSuccess?.(repoData.url, localPath);
-      Alert.alert('Success', `Repository ${repoData.name} cloned successfully!`);
+      
     } catch (error) {
-      const errorMessage = `Failed to clone repository: ${error}`;
-      onScanError?.(errorMessage);
-      Alert.alert('Clone Error', errorMessage);
+      console.error('❌ MGit clone failed:', error);
+      
+      // Detailed error logging
+      const errorDetails = {
+        message: error.message || 'Unknown error',
+        code: error.code || 'NO_CODE',
+        domain: error.domain || 'NO_DOMAIN',
+        userInfo: error.userInfo || {}
+      };
+      
+      console.log('🔍 Error details:', errorDetails);
+      
+      Alert.alert(
+        'Clone Error Details', 
+        `Error: ${errorDetails.message}\nCode: ${errorDetails.code}\nDomain: ${errorDetails.domain}`
+      );
+      
+      onScanError?.(error.message || 'Unknown clone error');
     }
   };
 
