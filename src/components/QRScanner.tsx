@@ -1,3 +1,4 @@
+import RNFS from 'react-native-fs';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -136,11 +137,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
   // remember: Usage: mgit clone [-jwt <token>] <url> [destination]
   const handleClone = async (repoData: GitRepoData) => {
-    const localPath = `/tmp/repos/${repoData.name}`;
+    // Use app's Documents directory instead of /tmp
+    const localPath = `${RNFS.DocumentDirectoryPath}/repos/${repoData.name}`;
     const options = repoData.token ? { token: repoData.token } : {};
     
     // Build the CORRECT command string for display
-    let commandString = `mgit clone`;
+    let commandString = `mgit mockClone`;
     if (repoData.token) {
       commandString += ` -jwt ${repoData.token}`;
     }
@@ -149,7 +151,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     // Show the command in an alert
     Alert.alert(
       'QR Code Detected',
-      `Parsed Repository Data:\n\nName: ${repoData.name}\nURL: ${repoData.url}\n${repoData.token ? `Token: ${repoData.token}\n` : ''}\nCommand: ${commandString}`,
+      `Parsed Repository Data:\n\nName: ${repoData.name}\nURL: ${repoData.url}\n${repoData.token ? `Token: ${repoData.token}\n` : ''}\nCommand: ${commandString}\n\nSafe Path: ${localPath}`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -163,7 +165,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
   const executeClone = async (repoData: GitRepoData, localPath: string, options: any) => {
     try {
       // Log start
-      console.log('🚀 Starting MGit clone...');
+      console.log('🚀 Starting MGit HELP...');
       console.log('📊 Clone parameters:', {
         url: repoData.url,
         localPath: localPath,
@@ -171,17 +173,29 @@ export const QRScanner: React.FC<QRScannerProps> = ({
         tokenLength: options.token?.length || 0
       });
       
-      Alert.alert('Debug', `Starting clone:\nURL: ${repoData.url}\nPath: ${localPath}\nToken: ${options.token ? 'Present' : 'Missing'}`);
+      Alert.alert('Debug', `Starting HELP:\nURL: ${repoData.url}\nPath: ${localPath}\nToken: ${options.token ? 'Present' : 'Missing'}`);
       
-      await NativeModules.MGitModule.clone(repoData.url, localPath, options);
+      const helpResult = await NativeModules.MGitModule.help();
       
-      console.log('✅ MGit clone completed successfully');
-      Alert.alert('Success', 'MGit clone completed!');
+      console.log('✅ MGit HELP completed successfully');
+      console.log('📄 Help output preview:', helpResult.preview);
+      console.log('📏 Full output length:', helpResult.outputLength);
+      
+      // Show the printUsage output in the success alert
+      Alert.alert(
+        'MGit Help Success!', 
+        `✅ Binary executed successfully!\n\n` +
+        `📄 printUsage Output (first 100 chars):\n` +
+        `"${helpResult.preview}"\n\n` +
+        `📏 Total output: ${helpResult.outputLength} characters\n` +
+        `🧮 Math test: 2+2=${helpResult.testMath}\n` +
+        `📱 Version: ${helpResult.version}`
+      );
       
       onScanSuccess?.(repoData.url, localPath);
       
     } catch (error) {
-      console.error('❌ MGit clone failed:', error);
+      console.error('❌ MGit help failed:', error);
       
       // Detailed error logging
       const errorDetails = {
@@ -194,11 +208,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       console.log('🔍 Error details:', errorDetails);
       
       Alert.alert(
-        'Clone Error Details', 
-        `Error: ${errorDetails.message}\nCode: ${errorDetails.code}\nDomain: ${errorDetails.domain}`
+        'Help Error Details', 
+        `❌ MGit Help Failed!\n\n` +
+        `Error: ${errorDetails.message}\n` +
+        `Code: ${errorDetails.code}\n` +
+        `Domain: ${errorDetails.domain}`
       );
       
-      onScanError?.(error.message || 'Unknown clone error');
+      onScanError?.(error.message || 'Unknown help error');
     }
   };
 

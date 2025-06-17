@@ -2,6 +2,7 @@ import {NativeModules} from 'react-native';
 
 interface MGitModule {
   clone: (url: string, localPath: string, options?: any) => Promise<any>;
+  mockClone: (url: string, localPath: string, options?: any) => Promise<any>;
   pull: (repositoryPath: string, options?: any) => Promise<any>;
   commit: (repositoryPath: string, message: string, options?: any) => Promise<any>;
   createMCommit: (
@@ -45,6 +46,19 @@ class MGitService {
       typeof module.commit === 'function' &&
       typeof module.createMCommit === 'function'
     );
+  }
+
+  static async mockClone(
+    url: string,
+    localPath: string,
+    options: any = {}
+  ): Promise<any> {
+    const module = this.getMGitModule();
+    if (!module) {
+      throw new Error('MGit module not available');
+    }
+
+    return module.mockClone(url, localPath, options);
   }
 
   static async cloneRepository(
