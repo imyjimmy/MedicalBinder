@@ -162,40 +162,54 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     );
   };
 
+  // Replace the executeClone function in QRScanner with this:
   const executeClone = async (repoData: GitRepoData, localPath: string, options: any) => {
     try {
-      // Log start
-      console.log('🚀 Starting MGit HELP...');
-      console.log('📊 Clone parameters:', {
+      console.log('=== Testing NEW Framework Approach ===');
+      console.log('🚀 Starting Framework Tests...');
+      console.log('📊 Test parameters:', {
         url: repoData.url,
         localPath: localPath,
         hasToken: !!options.token,
         tokenLength: options.token?.length || 0
       });
       
-      Alert.alert('Debug', `Starting HELP:\nURL: ${repoData.url}\nPath: ${localPath}\nToken: ${options.token ? 'Present' : 'Missing'}`);
+      Alert.alert('Debug', `Starting Framework Tests:\nURL: ${repoData.url}\nPath: ${localPath}\nToken: ${options.token ? 'Present' : 'Missing'}`);
       
+      // Test 1: Help method
+      console.log('Testing help()...');
       const helpResult = await NativeModules.MGitModule.help();
+      console.log('✅ Help result:', helpResult);
       
-      console.log('✅ MGit HELP completed successfully');
-      console.log('📄 Help output preview:', helpResult.preview);
-      console.log('📏 Full output length:', helpResult.outputLength);
+      // Test 2: Logging method
+      console.log('Testing testLogging()...');
+      const logResult = await NativeModules.MGitModule.testLogging();
+      console.log('✅ Logging result:', logResult);
       
-      // Show the printUsage output in the success alert
+      // Test 3: Simple math
+      console.log('Testing simpleAdd(2, 2)...');
+      const mathResult = await NativeModules.MGitModule.simpleAdd(2, 2);
+      console.log('✅ Math result:', mathResult);
+      
+      console.log('✅ ALL Framework tests completed successfully!');
+      
+      // Show comprehensive results
       Alert.alert(
-        'MGit Help Success!', 
-        `✅ Binary executed successfully!\n\n` +
-        `📄 printUsage Output (first 100 chars):\n` +
-        `"${helpResult.preview}"\n\n` +
-        `📏 Total output: ${helpResult.outputLength} characters\n` +
-        `🧮 Math test: 2+2=${helpResult.testMath}\n` +
-        `📱 Version: ${helpResult.version}`
+        'Framework Tests Success!', 
+        `✅ All framework methods executed successfully!\n\n` +
+        `📄 Help: ${helpResult.success ? '✅ Success' : '❌ Failed'}\n` +
+        `   Length: ${helpResult.helpText?.length || 0} chars\n\n` +
+        `📝 Logging: ${logResult.success ? '✅ Success' : '❌ Failed'}\n` +
+        `   Result: "${logResult.result}"\n\n` +
+        `🧮 Math (2+2): ${mathResult.success ? '✅ Success' : '❌ Failed'}\n` +
+        `   Result: ${mathResult.result}\n\n` +
+        `🎯 Framework Source: ${helpResult.source || 'unknown'}`
       );
       
       onScanSuccess?.(repoData.url, localPath);
       
     } catch (error) {
-      console.error('❌ MGit help failed:', error);
+      console.error('❌ Framework tests failed:', error);
       
       // Detailed error logging
       const errorDetails = {
@@ -208,14 +222,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       console.log('🔍 Error details:', errorDetails);
       
       Alert.alert(
-        'Help Error Details', 
-        `❌ MGit Help Failed!\n\n` +
+        'Framework Test Error', 
+        `❌ Framework Tests Failed!\n\n` +
         `Error: ${errorDetails.message}\n` +
         `Code: ${errorDetails.code}\n` +
-        `Domain: ${errorDetails.domain}`
+        `Domain: ${errorDetails.domain}\n\n` +
+        `This suggests the Go framework is not properly linked or there's an issue with the MGitBridge.xcframework integration.`
       );
       
-      onScanError?.(error.message || 'Unknown help error');
+      onScanError?.(error.message || 'Unknown framework error');
     }
   };
 
