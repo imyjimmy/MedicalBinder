@@ -5,6 +5,7 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
+    "ios:simulator": "CONFIGURATION=Debug react-native run-ios --simulator=\"iPhone 15 Pro\"",
     "dev": "react-native start --reset-cache",
     "build:ios": "expo run:ios",
     "start": "react-native start",

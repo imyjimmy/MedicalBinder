@@ -1,4 +1,3 @@
-import RNFS from 'react-native-fs';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -9,6 +8,8 @@ import {
   Dimensions,
   StatusBar,
 } from 'react-native';
+import RNFS from 'react-native-fs';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -17,6 +18,8 @@ import {
   useCodeScanner,
 } from 'react-native-vision-camera';
 import { NativeModules } from 'react-native';
+
+import { SimulatorDebugComponent } from './SimulatorDebugComponent';
 
 interface QRScannerProps {
   onScanSuccess?: (repoUrl: string, localPath: string) => void;
@@ -38,6 +41,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
   const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [isSimulator, setIsSimulator] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
 
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
@@ -137,100 +141,194 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
   // remember: Usage: mgit clone [-jwt <token>] <url> [destination]
   const handleClone = async (repoData: GitRepoData) => {
-    // Use app's Documents directory instead of /tmp
+    if (isCloning) { // Prevents multiple clicks
+      Alert.alert('Clone in Progress', 'Please wait for the current clone operation to complete.');
+      return;
+    }
+
     const localPath = `${RNFS.DocumentDirectoryPath}/repos/${repoData.name}`;
     const options = repoData.token ? { token: repoData.token } : {};
     
-    // Build the CORRECT command string for display
     let commandString = `mgit mockClone`;
     if (repoData.token) {
       commandString += ` -jwt ${repoData.token}`;
     }
     commandString += ` "${repoData.url}" "${localPath}"`;
     
-    // Show the command in an alert
     Alert.alert(
       'QR Code Detected',
       `Parsed Repository Data:\n\nName: ${repoData.name}\nURL: ${repoData.url}\n${repoData.token ? `Token: ${repoData.token}\n` : ''}\nCommand: ${commandString}\n\nSafe Path: ${localPath}`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Execute Clone', 
-          onPress: () => executeClone(repoData, localPath, options)
+          text: isCloning ? 'Cloning...' : 'Execute Clone',
+          style: isCloning ? 'default' : 'default',
+          onPress: isCloning ? undefined : () => executeClone(repoData, localPath, options)
         }
       ]
     );
   };
 
-  // Replace the executeClone function in QRScanner with this:
   const executeClone = async (repoData: GitRepoData, localPath: string, options: any) => {
+    // Set cloning state to prevent multiple executions
+    setIsCloning(true);
+  
     try {
-      console.log('=== Testing NEW Framework Approach ===');
-      console.log('🚀 Starting Framework Tests...');
-      console.log('📊 Test parameters:', {
-        url: repoData.url,
-        localPath: localPath,
-        hasToken: !!options.token,
-        tokenLength: options.token?.length || 0
-      });
+      console.log('=== Starting MGit Clone Operation ===');
       
-      Alert.alert('Debug', `Starting Framework Tests:\nURL: ${repoData.url}\nPath: ${localPath}\nToken: ${options.token ? 'Present' : 'Missing'}`);
+      // Show loading alert
+      Alert.alert('Clone Starting', '🔄 Initializing clone operation...');
       
-      // Test 1: Help method
-      console.log('Testing help()...');
+      // Run diagnostic tests first
+      console.log('🧪 Running framework diagnostics...');
       const helpResult = await NativeModules.MGitModule.help();
-      console.log('✅ Help result:', helpResult);
-      
-      // Test 2: Logging method
-      console.log('Testing testLogging()...');
       const logResult = await NativeModules.MGitModule.testLogging();
-      console.log('✅ Logging result:', logResult);
-      
-      // Test 3: Simple math
-      console.log('Testing simpleAdd(2, 2)...');
       const mathResult = await NativeModules.MGitModule.simpleAdd(2, 2);
-      console.log('✅ Math result:', mathResult);
       
-      console.log('✅ ALL Framework tests completed successfully!');
+      console.log('✅ Diagnostics completed');
       
-      // Show comprehensive results
-      Alert.alert(
-        'Framework Tests Success!', 
-        `✅ All framework methods executed successfully!\n\n` +
-        `📄 Help: ${helpResult.success ? '✅ Success' : '❌ Failed'}\n` +
-        `   Length: ${helpResult.helpText?.length || 0} chars\n\n` +
-        `📝 Logging: ${logResult.success ? '✅ Success' : '❌ Failed'}\n` +
-        `   Result: "${logResult.result}"\n\n` +
-        `🧮 Math (2+2): ${mathResult.success ? '✅ Success' : '❌ Failed'}\n` +
-        `   Result: ${mathResult.result}\n\n` +
-        `🎯 Framework Source: ${helpResult.source || 'unknown'}`
-      );
+      // Prepare clone paths
+      const documentsPath = RNFS.DocumentDirectoryPath;
+      const repoName = repoData.name || 'test-repo';
+      const mgitLocalPath = `${documentsPath}/mgit-repos/${repoName}`;
       
-      onScanSuccess?.(repoData.url, localPath);
+      // Check if directory already exists
+      const existsBefore = await RNFS.exists(mgitLocalPath);
+      if (existsBefore) {
+        console.log('📁 Directory exists, removing for fresh clone...');
+        try {
+          await RNFS.unlink(mgitLocalPath);
+          console.log('✅ Old directory removed');
+        } catch (error) {
+          console.log('⚠️ Could not remove existing directory:', error.message);
+          // Continue anyway - let MGit handle it
+        }
+      }
       
-    } catch (error) {
-      console.error('❌ Framework tests failed:', error);
+      // Ensure parent directory exists
+      await RNFS.mkdir(`${documentsPath}/mgit-repos`);
       
-      // Detailed error logging
-      const errorDetails = {
-        message: error.message || 'Unknown error',
-        code: error.code || 'NO_CODE',
-        domain: error.domain || 'NO_DOMAIN',
-        userInfo: error.userInfo || {}
+      const cloneConfig = {
+        url: repoData.url,
+        localPath: mgitLocalPath,
+        token: options.token || "default-token"
       };
       
-      console.log('🔍 Error details:', errorDetails);
+      console.log('🚀 Starting clone with config:', cloneConfig);
       
-      Alert.alert(
-        'Framework Test Error', 
-        `❌ Framework Tests Failed!\n\n` +
-        `Error: ${errorDetails.message}\n` +
-        `Code: ${errorDetails.code}\n` +
-        `Domain: ${errorDetails.domain}\n\n` +
-        `This suggests the Go framework is not properly linked or there's an issue with the MGitBridge.xcframework integration.`
+      // Execute the clone
+      const cloneResult = await NativeModules.MGitModule.clone(
+        cloneConfig.url,
+        cloneConfig.localPath,
+        cloneConfig.token
       );
       
-      onScanError?.(error.message || 'Unknown framework error');
+      console.log('🎉 Clone operation completed:', cloneResult);
+      
+      // Verify results by checking filesystem
+      const repoExists = await RNFS.exists(mgitLocalPath);
+      const gitExists = await RNFS.exists(`${mgitLocalPath}/.git`);
+      const mgitExists = await RNFS.exists(`${mgitLocalPath}/.mgit`);
+      
+      let fileCount = 0;
+      try {
+        const files = await RNFS.readDir(mgitLocalPath);
+        fileCount = files.length;
+      } catch (error) {
+        console.log('Could not count files:', error.message);
+      }
+      
+      // Show comprehensive results
+      if (cloneResult.success && repoExists) {
+        // SUCCESS CASE
+        Alert.alert(
+          '🎉 Clone Successful!',
+          `✅ Repository cloned successfully!\n\n` +
+          `📁 Repository: ${cloneResult.repoName || repoName}\n` +
+          `🆔 Repo ID: ${cloneResult.repoID || 'N/A'}\n` +
+          `📍 Local Path: ${mgitLocalPath}\n\n` +
+          `📊 File System Verification:\n` +
+          `📂 Repository directory: ${repoExists ? '✅ EXISTS' : '❌ MISSING'}\n` +
+          `🔧 .git directory: ${gitExists ? '✅ EXISTS' : '❌ MISSING'}\n` +
+          `⚙️ .mgit directory: ${mgitExists ? '✅ EXISTS' : '❌ MISSING'}\n` +
+          `📄 Files count: ${fileCount}\n\n` +
+          `🔗 Source: ${cloneConfig.url}\n` +
+          `💬 Message: ${cloneResult.message}`
+        );
+        
+        onScanSuccess?.(repoData.url, mgitLocalPath);
+        
+      } else if (cloneResult.success && !repoExists) {
+        // PARTIAL SUCCESS - clone reported success but directory doesn't exist
+        Alert.alert(
+          '⚠️ Clone Partially Successful',
+          `🤔 Clone reported success but verification failed\n\n` +
+          `📊 Clone Result:\n` +
+          `✅ MGit Status: ${cloneResult.success ? 'SUCCESS' : 'FAILED'}\n` +
+          `💬 Message: ${cloneResult.message}\n\n` +
+          `📊 File System Check:\n` +
+          `📂 Directory exists: ${repoExists ? 'YES' : 'NO'}\n` +
+          `📍 Expected path: ${mgitLocalPath}\n\n` +
+          `This might be a path mapping issue between Go and iOS.`
+        );
+        
+      } else {
+        // FAILURE CASE
+        Alert.alert(
+          '❌ Clone Failed',
+          `💥 Repository clone failed\n\n` +
+          `📊 Error Details:\n` +
+          `💬 Message: ${cloneResult.message || 'Unknown error'}\n` +
+          `🔗 URL: ${cloneConfig.url}\n` +
+          `📍 Path: ${mgitLocalPath}\n\n` +
+          `📊 Diagnostics (these worked):\n` +
+          `📄 Help: ${helpResult.success ? '✅' : '❌'}\n` +
+          `📝 Logging: ${logResult.success ? '✅' : '❌'}\n` +
+          `🧮 Math: ${mathResult.success ? '✅' : '❌'}\n\n` +
+          `The framework is working, but the clone operation failed.`
+        );
+        
+        onScanError?.(cloneResult.message || 'Clone operation failed');
+      }
+      
+    } catch (error) {
+      console.error('❌ Clone operation failed with exception:', error);
+      
+      // Handle specific error cases
+      let errorTitle = '❌ Clone Error';
+      let errorMessage = '';
+      
+      if (error.message?.includes('already exists')) {
+        errorTitle = '📁 Directory Already Exists';
+        errorMessage = `⚠️ The target directory already exists!\n\n` +
+          `This usually means a previous clone succeeded.\n\n` +
+          `📍 Path: ${mgitLocalPath}\n\n` +
+          `The directory should have been removed automatically. ` +
+          `This might be a permission issue.`;
+      } else if (error.code === 'CLONE_ERROR') {
+        errorMessage = `💥 MGit clone operation failed\n\n` +
+          `📝 Error: ${error.message}\n` +
+          `🔍 Code: ${error.code}\n\n` +
+          `This could be due to:\n` +
+          `• Network connectivity issues\n` +
+          `• Invalid authentication token\n` +
+          `• Server not accessible\n` +
+          `• Repository doesn't exist`;
+      } else {
+        errorMessage = `🔧 Unexpected error occurred\n\n` +
+          `📝 Error: ${error.message}\n` +
+          `🔍 Code: ${error.code || 'UNKNOWN'}\n` +
+          `🏷️ Domain: ${error.domain || 'N/A'}\n\n` +
+          `This might be a framework integration issue.`;
+      }
+      
+      Alert.alert(errorTitle, errorMessage);
+      onScanError?.(error.message || 'Unknown clone error');
+      
+    } finally {
+      // Always reset the cloning state
+      setIsCloning(false);
+      console.log('🏁 Clone operation completed, state reset');
     }
   };
 
@@ -269,20 +367,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
   if (isSimulator) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.permissionText}>Camera not available in simulator</Text>
-        <Text style={styles.instructionsText}>
-          Please test QR scanning on a physical device
-        </Text>
-        {onClose && (
-          <TouchableOpacity 
-            style={[styles.closeButton, { top: insets.top + 10 }]} 
-            onPress={onClose}
-          >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <SimulatorDebugComponent
+        onScanSuccess={onScanSuccess}
+        onScanError={onScanError}
+        onClose={onClose}
+        handleClone={handleClone}
+      />
     );
   }
 
