@@ -7,5 +7,6 @@ export interface GitRepoData {
 export interface ClonedRepo {
   url: string;
   path: string;
+  name: string;
   clonedAt: Date;
 }

@@ -22,7 +22,7 @@ import { NativeModules } from 'react-native';
 import { SimulatorDebugComponent } from './SimulatorDebugComponent';
 
 interface QRScannerProps {
-  onScanSuccess?: (repoUrl: string, localPath: string) => void;
+  onScanSuccess?: (repoUrl: string, localPath: string, name: string) => void;
   onScanError?: (error: string) => void;
   onClose?: () => void;
 }

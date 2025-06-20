@@ -18,7 +18,7 @@ interface GitRepoData {
 }
 
 interface SimulatorDebugComponentProps {
-  onScanSuccess?: (repoUrl: string, localPath: string) => void;
+  onScanSuccess?: (repoUrl: string, localPath: string, name: string) => void;
   onScanError?: (error: string) => void;
   onClose?: () => void;
   handleClone: (repoData: GitRepoData) => void;

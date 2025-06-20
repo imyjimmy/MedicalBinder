@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -8,19 +9,36 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { QRScanner } from '../components/QRScanner';
+import { ClonedRepo } from '../types/git';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { RootStackParamList } from '../../App';
+
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [clonedRepos, setClonedRepos] = useState<Array<{url: string, path: string}>>([]);
+  const [clonedRepos, setClonedRepos] = useState<Array<ClonedRepo>>([]);
 
-  const handleScanSuccess = (repoUrl: string, localPath: string) => {
-    setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath }]);
+  const handleScanSuccess = (repoUrl: string, name: string, localPath: string) => {
+    setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date() }]);
     setShowQRScanner(false);
   };
 
   const handleScanError = (error: string) => {
     console.error('QR Scan Error:', error);
     // Keep scanner open for retry
+  };
+
+  const navigateToAddRecord = (repo: ClonedRepo) => {
+    // Navigate to AddRecordScreen with repo details
+    console.log('Navigating with repo:', repo);
+    console.log('Repo path:', repo.path);
+
+    navigation.navigate('AddRecord', { 
+      repoPath: repo.name,
+      repoName: repo.name
+    });
   };
 
   return (
@@ -40,8 +58,16 @@ export const HomeScreen: React.FC = () => {
             <Text style={styles.reposTitle}>Cloned Repositories:</Text>
             {clonedRepos.map((repo, index) => (
               <View key={index} style={styles.repoItem}>
-                <Text style={styles.repoUrl}>{repo.url}</Text>
-                <Text style={styles.repoPath}>{repo.path}</Text>
+                <View style={styles.repoInfo}>
+                  <Text style={styles.repoName}>{repo.name}</Text>
+                  <Text style={styles.repoPath}>{repo.path}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.addRecordButton}
+                  onPress={() => navigateToAddRecord(repo)}
+                >
+                  <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -64,6 +90,17 @@ export const HomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  addRecordButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  addRecordButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -102,6 +139,9 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   repoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: 'white',
     padding: 15,
     borderRadius: 8,
@@ -111,6 +151,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  repoInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  repoName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  repoDate: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
   },
   repoUrl: {
     fontSize: 14,
