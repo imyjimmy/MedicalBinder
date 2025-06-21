@@ -142,7 +142,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
   // remember: Usage: mgit clone [-jwt <token>] <url> [destination]
   const handleClone = async (repoData: GitRepoData) => {
     if (isCloning) { // Prevents multiple clicks
-      Alert.alert('Clone in Progress', 'Please wait for the current clone operation to complete.');
+      console.log('Clone in Progress', 'Please wait for the current clone operation to complete.');
       return;
     }
 
@@ -155,18 +155,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     }
     commandString += ` "${repoData.url}" "${localPath}"`;
     
-    Alert.alert(
-      'QR Code Detected',
+    console.log(
+      '==== QR Code Detected ====',
       `Parsed Repository Data:\n\nName: ${repoData.name}\nURL: ${repoData.url}\n${repoData.token ? `Token: ${repoData.token}\n` : ''}\nCommand: ${commandString}\n\nSafe Path: ${localPath}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: isCloning ? 'Cloning...' : 'Execute Clone',
-          style: isCloning ? 'default' : 'default',
-          onPress: isCloning ? undefined : () => executeClone(repoData, localPath, options)
-        }
-      ]
     );
+
+    executeClone(repoData, localPath, options);
   };
 
   const executeClone = async (repoData: GitRepoData, localPath: string, options: any) => {
@@ -177,7 +171,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       console.log('=== Starting MGit Clone Operation ===');
       
       // Show loading alert
-      Alert.alert('Clone Starting', '🔄 Initializing clone operation...');
+      console.log('Clone Starting', '🔄 Initializing clone operation...');
       
       // Run diagnostic tests first
       console.log('🧪 Running framework diagnostics...');
@@ -241,7 +235,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       // Show comprehensive results
       if (cloneResult.success && repoExists) {
         // SUCCESS CASE
-        Alert.alert(
+        console.log(
           '🎉 Clone Successful!',
           `✅ Repository cloned successfully!\n\n` +
           `📁 Repository: ${cloneResult.repoName || repoName}\n` +
@@ -256,11 +250,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           `💬 Message: ${cloneResult.message}`
         );
         
-        onScanSuccess?.(repoData.url, mgitLocalPath);
+        onScanSuccess?.(repoData.url, mgitLocalPath, repoName);
         
       } else if (cloneResult.success && !repoExists) {
         // PARTIAL SUCCESS - clone reported success but directory doesn't exist
-        Alert.alert(
+        console.log(
           '⚠️ Clone Partially Successful',
           `🤔 Clone reported success but verification failed\n\n` +
           `📊 Clone Result:\n` +
@@ -274,7 +268,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
         
       } else {
         // FAILURE CASE
-        Alert.alert(
+        console.error(
           '❌ Clone Failed',
           `💥 Repository clone failed\n\n` +
           `📊 Error Details:\n` +
@@ -322,7 +316,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           `This might be a framework integration issue.`;
       }
       
-      Alert.alert(errorTitle, errorMessage);
+      console.error(errorTitle, errorMessage);
       onScanError?.(error.message || 'Unknown clone error');
       
     } finally {
