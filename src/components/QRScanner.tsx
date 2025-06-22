@@ -20,17 +20,12 @@ import {
 import { NativeModules } from 'react-native';
 
 import { SimulatorDebugComponent } from './SimulatorDebugComponent';
+import { GitRepoData, ScanSuccessCallback } from '../types/git';  // Add ScanSuccessCallback import
 
 interface QRScannerProps {
-  onScanSuccess?: (repoUrl: string, localPath: string, name: string) => void;
+  onScanSuccess?: ScanSuccessCallback;
   onScanError?: (error: string) => void;
   onClose?: () => void;
-}
-
-interface GitRepoData {
-  url: string;
-  name: string;
-  token?: string;
 }
 
 export const QRScanner: React.FC<QRScannerProps> = ({
@@ -250,7 +245,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           `💬 Message: ${cloneResult.message}`
         );
         
-        onScanSuccess?.(repoData.url, mgitLocalPath, repoName);
+        onScanSuccess?.(repoName, repoData.url, mgitLocalPath);
         
       } else if (cloneResult.success && !repoExists) {
         // PARTIAL SUCCESS - clone reported success but directory doesn't exist

@@ -16,7 +16,7 @@
     "clean:ios": "cd ios && rm -rf build/ && rm -rf Pods/ && rm -f Podfile.lock && cd ..",
     "clean:modules": "rm -rf node_modules/ && yarn install",
     "clean:rebuild": "yarn clean && cd ios && pod install && cd .. && yarn ios",
-    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios"
+    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:simulator"
   },
   "dependencies": {
     "@react-navigation/native": "^7.1.13",

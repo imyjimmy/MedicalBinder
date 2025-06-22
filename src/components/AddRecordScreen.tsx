@@ -84,9 +84,10 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
       );
 
       if (commitResult.success) {
+        console.log('commit success: ', commitResult);
         Alert.alert(
           'Success! 🎉',
-          `Medical record added and committed!\n\nCommit: ${commitResult.commitHash?.substring(0, 8)}`,
+          `Medical record added and committed!\n\nCommit: ${commitResult.mGitHash?.substring(0, 8)}`,
           [{ text: 'OK', onPress: () => {
             setRecordText('');
             setNostrPubkey('');

@@ -10,15 +10,10 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-interface GitRepoData {
-  url: string;
-  name: string;
-  token?: string;
-}
+import { GitRepoData, ScanSuccessCallback } from '../types/git';  // Add ScanSuccessCallback import
 
 interface SimulatorDebugComponentProps {
-  onScanSuccess?: (repoUrl: string, localPath: string, name: string) => void;
+  onScanSuccess?: ScanSuccessCallback;
   onScanError?: (error: string) => void;
   onClose?: () => void;
   handleClone: (repoData: GitRepoData) => void;
@@ -59,7 +54,7 @@ export const SimulatorDebugComponent: React.FC<SimulatorDebugComponentProps> = (
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.simulatorContainer}>
-          <Text style={styles.simulatorTitle}>Simulator Debug Mode</Text>
+          <Text style={styles.simulatorTitle}>QR Scanner Sim</Text>
           <Text style={styles.simulatorSubtitle}>
             Enter repository details manually for testing:
           </Text>

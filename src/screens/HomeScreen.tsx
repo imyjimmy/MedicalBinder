@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { QRScanner } from '../components/QRScanner';
-import { ClonedRepo } from '../types/git';
+import { ClonedRepo, ScanSuccessCallback } from '../types/git';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 
@@ -20,7 +20,7 @@ export const HomeScreen: React.FC = () => {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [clonedRepos, setClonedRepos] = useState<Array<ClonedRepo>>([]);
 
-  const handleScanSuccess = (repoUrl: string, name: string, localPath: string) => {
+  const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string) => {
     setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date() }]);
     setShowQRScanner(false);
   };
@@ -36,7 +36,7 @@ export const HomeScreen: React.FC = () => {
     console.log('Repo path:', repo.path);
 
     navigation.navigate('AddRecord', { 
-      repoPath: repo.name,
+      repoPath: repo.path,
       repoName: repo.name
     });
   };
@@ -44,7 +44,7 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Git Repository Manager</Text>
+        <Text style={styles.title}>Add a Binder</Text>
         
         <TouchableOpacity
           style={styles.scanButton}
@@ -53,25 +53,17 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.scanButtonText}>Scan QR Code</Text>
         </TouchableOpacity>
 
-        {clonedRepos.length > 0 && (
-          <View style={styles.reposList}>
-            <Text style={styles.reposTitle}>Cloned Repositories:</Text>
-            {clonedRepos.map((repo, index) => (
-              <View key={index} style={styles.repoItem}>
-                <View style={styles.repoInfo}>
-                  <Text style={styles.repoName}>{repo.name}</Text>
-                  <Text style={styles.repoPath}>{repo.path}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.addRecordButton}
-                  onPress={() => navigateToAddRecord(repo)}
-                >
-                  <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+        {clonedRepos.map((repo, index) => (
+          <View key={index} style={styles.repoItem}>
+            <Text style={styles.repoName}>{repo.name}</Text>
+            <TouchableOpacity
+              style={styles.addRecordButton}
+              onPress={() => navigateToAddRecord(repo)}
+            >
+              <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
+            </TouchableOpacity>
           </View>
-        )}
+        ))}
       </View>
 
       <Modal
@@ -93,8 +85,10 @@ const styles = StyleSheet.create({
   addRecordButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderRadius: 6,
+    marginTop: 12,      
+    alignSelf: 'center',
   },
   addRecordButtonText: {
     color: 'white',
@@ -139,9 +133,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   repoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     backgroundColor: 'white',
     padding: 15,
     borderRadius: 8,
@@ -151,10 +143,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-  },
-  repoInfo: {
-    flex: 1,
-    marginRight: 12,
   },
   repoName: {
     fontSize: 16,
