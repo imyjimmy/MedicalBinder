@@ -9,6 +9,7 @@ export interface ClonedRepo {
   path: string;
   name: string;
   clonedAt: Date;
+  token?: string;
 }
 
-export type ScanSuccessCallback = (name: string, repoUrl: string, localPath: string) => void;
+export type ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token?: string) => void;

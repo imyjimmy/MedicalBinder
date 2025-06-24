@@ -16,7 +16,7 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
   console.log('AddRecordScreen route params:', route.params);
   const { repoPath, repoName } = route.params;
   const [recordText, setRecordText] = useState('');
-  const [nostrPubkey, setNostrPubkey] = useState('');
+  const [nostrPubkey, setNostrPubkey] = useState('npub19jlhl9twyjajarvrjeeh75a5ylzngv4tj8y9wgffsguylz9eh73qd85aws');
   const [isCommitting, setIsCommitting] = useState(false);
 
   // Print the full strings without truncation

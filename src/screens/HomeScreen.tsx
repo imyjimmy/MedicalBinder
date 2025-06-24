@@ -12,6 +12,9 @@ import { QRScanner } from '../components/QRScanner';
 import { ClonedRepo, ScanSuccessCallback } from '../types/git';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
+import { NativeModules } from 'react-native'; // Add this import
+
+const { MGitModule } = NativeModules; // Add this line
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -19,9 +22,10 @@ export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [clonedRepos, setClonedRepos] = useState<Array<ClonedRepo>>([]);
+  const [isPushing, setIsPushing] = useState<{ [key: string]: boolean }>({});
 
-  const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string) => {
-    setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date() }]);
+  const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token?: string) => {
+    setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date(), token: token }]);
     setShowQRScanner(false);
   };
 
@@ -41,6 +45,33 @@ export const HomeScreen: React.FC = () => {
     });
   };
 
+  // Add this new function for push functionality
+  const handlePushRepo = async (repo: ClonedRepo) => {
+    if (!repo.token) {
+      console.error('Error', 'No authentication token found for this repository');
+      return;
+    }
+
+    setIsPushing(prev => ({ ...prev, [repo.name]: true }));
+
+    try {
+      const result = await MGitModule.push(repo.path, 'Basic ' + repo.token);
+      
+      if (result.success) {
+        console.log(
+          'Push Successful', 
+          `${result.message}\nCommit: ${result.commitHash?.substring(0, 7) || 'N/A'}`
+        );
+      } else {
+        console.log('Push Failed', result.message);
+      }
+    } catch (error) {
+      console.error('Push error, failed to push changes to remote repo:', error);
+    } finally {
+      setIsPushing(prev => ({ ...prev, [repo.name]: false }));
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -55,13 +86,31 @@ export const HomeScreen: React.FC = () => {
 
         {clonedRepos.map((repo, index) => (
           <View key={index} style={styles.repoItem}>
-            <Text style={styles.repoName}>{repo.name}</Text>
-            <TouchableOpacity
-              style={styles.addRecordButton}
-              onPress={() => navigateToAddRecord(repo)}
-            >
-              <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
-            </TouchableOpacity>
+            <View style={styles.repoInfo}>
+              <Text style={styles.repoName}>{repo.name}</Text>
+              <Text style={styles.repoPath}>{repo.path}</Text>
+            </View>
+            <View style={styles.buttonContainer}> {/* New container for buttons */}
+              <TouchableOpacity
+                style={styles.addRecordButton}
+                onPress={() => navigateToAddRecord(repo)}
+              >
+                <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.pushButton, 
+                  isPushing[repo.name] && styles.pushButtonDisabled
+                ]}
+                onPress={() => handlePushRepo(repo)}
+                disabled={isPushing[repo.name]}
+              >
+                <Text style={styles.pushButtonText}>
+                  {isPushing[repo.name] ? '⏳ Pushing...' : '📤 Push'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </View>
@@ -95,6 +144,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  buttonContainer: { // Add this new style
+    flexDirection: 'column',
+    gap: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -102,6 +155,21 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+  },
+  pushButton: {
+    backgroundColor: '#34C759', // Green color for push
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  pushButtonDisabled: {
+    backgroundColor: '#8E8E93', // Gray when disabled
+  },
+  pushButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   title: {
     fontSize: 24,
@@ -131,6 +199,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 15,
     color: '#333',
+  },
+  repoInfo: {
+    flex: 1,
+    marginRight: 12,
   },
   repoItem: {
     flexDirection: 'column',
