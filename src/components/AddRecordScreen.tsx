@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 
@@ -74,27 +74,36 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
         'utf8'
       );
 
-      // Step 4: MGit commit the changes
+      // Step 4: Stage the file with MGit Add (NEW)
+      console.log('Staging file with MGit add...');
+      const addResult = await MGitModule.add(repoPath, 'medical-history.json');
+      if (!addResult.success) {
+        throw new Error(addResult.error || 'Failed to stage file');
+      }
+      console.log('File staged successfully:', addResult.message);
+
+      // Step 5: Create MCommit with Nostr signature (UPDATED)
+      console.log('Creating MCommit with Nostr signature...');
       const commitResult = await MGitModule.commit(
         repoPath,
-        `Add medical record: ${recordText.substring(0, 50)}${recordText.length > 50 ? '...' : ''}`,
+        'added_medical_record', // Standardized commit message
         'Patient', // author name - could be made configurable
         'patient@example.com', // author email - could be made configurable  
         nostrPubkey
       );
 
       if (commitResult.success) {
-        console.log('commit success: ', commitResult);
+        console.log('MCommit success:', commitResult);
         Alert.alert(
           'Success! 🎉',
-          `Medical record added and committed!\n\nCommit: ${commitResult.mGitHash?.substring(0, 8)}`,
+          `Medical record added and committed!\n\nGit Hash: ${commitResult.gitHash?.substring(0, 8)}\nMGit Hash: ${commitResult.mGitHash?.substring(0, 8)}\nNostr Signed: ✓`,
           [{ text: 'OK', onPress: () => {
             setRecordText('');
             setNostrPubkey('');
           }}]
         );
       } else {
-        throw new Error(commitResult.error || 'Commit failed');
+        throw new Error(commitResult.message || 'Commit failed');
       }
 
     } catch (error) {
@@ -106,65 +115,73 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Add Medical Record</Text>
-      
-      <View style={styles.section}>
-        <Text style={styles.info}>Repository: {repoPath}</Text>
-        <Text style={styles.info}>Will append to: medical-history.json</Text>
-      </View>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0} // Adjust based on your header height
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView style={styles.container}>
+          <Text style={styles.title}>Add Medical Record</Text>
+          
+          <View style={styles.section}>
+            <Text style={styles.info}>Repository: {repoPath}</Text>
+            <Text style={styles.info}>Will append to: medical-history.json</Text>
+          </View>
 
-      <TouchableOpacity
-        style={[styles.addButton, isCommitting && styles.buttonDisabled]}
-        onPress={() => {
-          // Just show the form - in a real app you might want a modal or navigation
-        }}
-        disabled={isCommitting}
-      >
-        <Text style={styles.addButtonText}>📝 Add Record</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.addButton, isCommitting && styles.buttonDisabled]}
+            onPress={() => {
+              // Just show the form - in a real app you might want a modal or navigation
+            }}
+            disabled={isCommitting}
+          >
+            <Text style={styles.addButtonText}>📝 Add Record</Text>
+          </TouchableOpacity>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Medical Record Content:</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={recordText}
-          onChangeText={setRecordText}
-          placeholder="Enter your medical record content (e.g., 'Hello World - feeling great today!')"
-          multiline={true}
-          numberOfLines={8}
-          textAlignVertical="top"
-        />
+          <View style={styles.form}>
+            <Text style={styles.label}>Medical Record Content:</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={recordText}
+              onChangeText={setRecordText}
+              placeholder="Enter your medical record content (e.g., 'Hello World - feeling great today!')"
+              multiline={true}
+              numberOfLines={8}
+              textAlignVertical="top"
+            />
 
-        <Text style={styles.label}>Your Nostr Public Key:</Text>
-        <TextInput
-          style={styles.input}
-          value={nostrPubkey}
-          onChangeText={setNostrPubkey}
-          placeholder="npub... or hex format"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+            <Text style={styles.label}>Your Nostr Public Key:</Text>
+            <TextInput
+              style={styles.input}
+              value={nostrPubkey}
+              onChangeText={setNostrPubkey}
+              placeholder="npub... or hex format"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-        <TouchableOpacity
-          style={[styles.saveButton, isCommitting && styles.buttonDisabled]}
-          onPress={addRecord}
-          disabled={isCommitting || !recordText.trim() || !nostrPubkey.trim()}
-        >
-          <Text style={styles.saveButtonText}>
-            {isCommitting ? '⏳ Committing...' : '💾 Save & Commit'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={[styles.saveButton, isCommitting && styles.buttonDisabled]}
+              onPress={addRecord}
+              disabled={isCommitting || !recordText.trim() || !nostrPubkey.trim()}
+            >
+              <Text style={styles.saveButtonText}>
+                {isCommitting ? '⏳ Committing...' : '💾 Save & Commit'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.section}>
-        <Text style={styles.subtitle}>What This Does</Text>
-        <Text style={styles.info}>✓ Reads existing medical-history.json</Text>
-        <Text style={styles.info}>✓ Appends your new record to the JSON array</Text>
-        <Text style={styles.info}>✓ Writes updated file back to repository</Text>
-        <Text style={styles.info}>✓ Creates MGit commit with Nostr pubkey</Text>
-      </View>
-    </ScrollView>
+          <View style={styles.section}>
+            <Text style={styles.subtitle}>What This Does</Text>
+            <Text style={styles.info}>✓ Reads existing medical-history.json</Text>
+            <Text style={styles.info}>✓ Appends your new record to the JSON array</Text>
+            <Text style={styles.info}>✓ Writes updated file back to repository</Text>
+            <Text style={styles.info}>✓ Creates MGit commit with Nostr pubkey</Text>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
