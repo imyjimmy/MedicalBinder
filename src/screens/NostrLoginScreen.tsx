@@ -44,19 +44,20 @@ export const NostrLoginScreen: React.FC<NostrLoginScreenProps> = ({ onLoginSucce
   const handleLoginWithStoredKey = async () => {
     setLoading(true);
     try {
-      const authResult = await NostrAuthService.authenticateWithServer();
+      // Check if we have valid stored credentials
+      const credentials = await KeychainService.getNostrCredentials();
       
-      if (authResult.status === 'OK') {
+      if (credentials) {
         Alert.alert(
-          'Login Successful!', 
-          `Welcome back! Authenticated as ${authResult.pubkey?.substring(0, 16)}...`,
+          'Welcome Back!', 
+          `Logged in as: ${credentials.npub.substring(0, 20)}...`,
           [{ text: 'Continue', onPress: onLoginSuccess }]
         );
       } else {
-        Alert.alert('Authentication Failed', authResult.reason || 'Unknown error occurred');
+        Alert.alert('Error', 'No stored credentials found');
       }
     } catch (error) {
-      Alert.alert('Login Error', 'Failed to authenticate with server');
+      Alert.alert('Login Error', 'Failed to access stored credentials');
       console.error('Login error:', error);
     } finally {
       setLoading(false);
@@ -133,21 +134,14 @@ export const NostrLoginScreen: React.FC<NostrLoginScreenProps> = ({ onLoginSucce
         throw new Error('Failed to store credentials securely');
       }
 
-      // Authenticate with server
-      const authResult = await NostrAuthService.authenticateWithServer();
-      
-      if (authResult.status === 'OK') {
-        Alert.alert(
-          'Import Successful!',
-          `Identity imported successfully.\nPublic key: ${keyPair.npub}`,
-          [{ text: 'Continue', onPress: onLoginSuccess }]
-        );
-        setHasStoredCredentials(true);
-        setShowImportKey(false);
-        setPrivateKeyInput('');
-      } else {
-        Alert.alert('Authentication Failed', authResult.reason || 'Server authentication failed');
-      }
+      Alert.alert(
+        'Import Successful!',
+        `Identity imported successfully.\nPublic key: ${keyPair.npub}`,
+        [{ text: 'Continue', onPress: onLoginSuccess }]
+      );
+      setHasStoredCredentials(true);
+      setShowImportKey(false);
+      setPrivateKeyInput('');
     } catch (error) {
       Alert.alert(
         'Import Failed', 
@@ -219,7 +213,7 @@ export const NostrLoginScreen: React.FC<NostrLoginScreenProps> = ({ onLoginSucce
               {loading ? (
                 <ActivityIndicator size="small" color="white" />
               ) : (
-                <Text style={styles.primaryButtonText}>Authenticate & Continue</Text>
+                <Text style={styles.primaryButtonText}>Continue with Stored Identity</Text>
               )}
             </TouchableOpacity>
 
@@ -448,5 +442,11 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: '600',
+  },
+  serverUrlContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
   },
 });

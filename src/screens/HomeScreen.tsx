@@ -25,7 +25,7 @@ interface HomeScreenProps {
   onLogout: () => void;
 }
 
-export const HomeScreen: React.FC = () => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
@@ -115,48 +115,54 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         {/* Main Actions */}
-        <View style={styles.content}>
-          <Text style={styles.title}>Add a Binder</Text>
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionTitle}>📱 Medical Repository Actions</Text>
           
-          <TouchableOpacity
-            style={styles.scanButton}
+          <TouchableOpacity 
+            style={styles.actionButton}
             onPress={() => setShowQRScanner(true)}
           >
-            <Text style={styles.scanButtonText}>Scan QR Code</Text>
+            <Text style={styles.actionButtonText}>📷 Scan QR Code to Clone Repository</Text>
           </TouchableOpacity>
+        </View>
 
-          {clonedRepos.map((repo, index) => (
-            <View key={index} style={styles.repoItem}>
-              <View style={styles.repoInfo}>
-                <Text style={styles.repoName}>{repo.name}</Text>
+        {/* Cloned Repositories */}
+        {clonedRepos.length > 0 && (
+          <View style={styles.reposSection}>
+            <Text style={styles.sectionTitle}>📁 Your Medical Repositories</Text>
+            
+            {clonedRepos.map((repo, index) => (
+              <View key={index} style={styles.repoCard}>
+                <View style={styles.repoHeader}>
+                  <Text style={styles.repoName}>{repo.name}</Text>
+                  <Text style={styles.repoDate}>
+                    Cloned: {repo.clonedAt.toLocaleDateString()}
+                  </Text>
+                </View>
                 <Text style={styles.repoPath}>{repo.path}</Text>
-              </View>
-              <View style={styles.buttonContainer}> {/* New container for buttons */}
-                <TouchableOpacity
+                
+                <TouchableOpacity 
                   style={styles.addRecordButton}
                   onPress={() => navigateToAddRecord(repo)}
                 >
-                  <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.pushButton, 
-                    isPushing[repo.name] && styles.pushButtonDisabled
-                  ]}
-                  onPress={() => handlePushRepo(repo)}
-                  disabled={isPushing[repo.name]}
-                >
-                  <Text style={styles.pushButtonText}>
-                    {isPushing[repo.name] ? '⏳ Pushing...' : '📤 Push'}
-                  </Text>
+                  <Text style={styles.addRecordButtonText}>+ Add Medical Record</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
+        )}
+
+        {/* Info Section */}
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>🏥 About Medical Binder</Text>
+          <Text style={styles.infoText}>
+            Medical Binder uses NOSTR for sovereign identity and MGit for version-controlled medical records. 
+            Your private keys never leave your device, ensuring complete self-custody of your medical data.
+          </Text>
         </View>
       </ScrollView>
 
+      {/* QR Scanner Modal */}
       <Modal
         visible={showQRScanner}
         animationType="slide"
@@ -168,28 +174,32 @@ export const HomeScreen: React.FC = () => {
           onClose={() => setShowQRScanner(false)}
         />
       </Modal>
+
+      {/* Key Manager Modal */}
+      <Modal
+        visible={showKeyManager}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowKeyManager(false)}
+            >
+              <Text style={styles.closeButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView>
+            <NostrKeyManager onLogout={onLogout} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  addRecordButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 6,
-    marginTop: 12,      
-    alignSelf: 'center',
-  },
-  addRecordButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  buttonContainer: { // Add this new style
-    flexDirection: 'column',
-    gap: 8,
-  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -215,6 +225,12 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 8,
   },
+  pubkeyText: {
+    fontSize: 14,
+    fontFamily: 'Menlo, Monaco, monospace',
+    color: '#666',
+    marginBottom: 12,
+  },
   manageKeysButton: {
     backgroundColor: '#007AFF',
     borderRadius: 6,
@@ -227,91 +243,111 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  pubkeyText: {
-    fontSize: 14,
-    fontFamily: 'Menlo, Monaco, monospace',
-    color: '#666',
+  actionsSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 16,
+  },
+  actionButton: {
+    backgroundColor: '#34C759',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
     marginBottom: 12,
   },
-  pushButton: {
-    backgroundColor: '#34C759', // Green color for push
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  pushButtonDisabled: {
-    backgroundColor: '#8E8E93', // Gray when disabled
-  },
-  pushButtonText: {
+  actionButtonText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#333',
-  },
-  scanButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginBottom: 30,
-  },
-  scanButtonText: {
-    color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
-  reposList: {
-    flex: 1,
+  reposSection: {
+    marginBottom: 20,
   },
-  reposTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 15,
-    color: '#333',
-  },
-  repoInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  repoItem: {
-    flexDirection: 'column',
+  repoCard: {
     backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
+  repoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   repoName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: '#1a1a1a',
   },
   repoDate: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
-  },
-  repoUrl: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#007AFF',
-    marginBottom: 5,
-  },
-  repoPath: {
     fontSize: 12,
     color: '#666',
+  },
+  repoPath: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    fontFamily: 'Menlo, Monaco, monospace',
+  },
+  addRecordButton: {
+    backgroundColor: '#FF9500',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+  },
+  addRecordButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  infoSection: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1565C0',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#1976D2',
+    lineHeight: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: 'white',
+  },
+  closeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  closeButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

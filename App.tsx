@@ -1,4 +1,4 @@
-import './src/polyfills';
+import './src/polyfills'; // Import polyfills first
 import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,8 +6,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { NostrLoginScreen } from './src/screens/NostrLoginScreen';
-import { NostrAuthService } from './src/services/NostrAuthService';
 import AddRecordScreen from './src/components/AddRecordScreen';
+import { KeychainService } from './src/services/KeychainService';
 
 // Define your navigation params
 export type RootStackParamList = {
@@ -30,8 +30,9 @@ function App(): React.JSX.Element {
 
   const checkAuthenticationStatus = async () => {
     try {
-      const authenticated = await NostrAuthService.isAuthenticated();
-      setIsAuthenticated(authenticated);
+      // Check if we have stored NOSTR credentials - no server needed
+      const hasCredentials = await KeychainService.hasStoredCredentials();
+      setIsAuthenticated(hasCredentials);
     } catch (error) {
       console.error('Failed to check authentication status:', error);
       setIsAuthenticated(false);
@@ -72,9 +73,22 @@ function App(): React.JSX.Element {
         <Stack.Navigator initialRouteName="Home">
           <Stack.Screen 
             name="Home" 
-            component={HomeScreen} 
-            options={{ title: 'Medical Binder' }}
-          />
+            options={{ 
+              title: 'Medical Binder',
+              headerRight: () => (
+                <View style={{ marginRight: 15 }}>
+                  {/* You can add a profile/logout button here */}
+                </View>
+              ),
+            }}
+          >
+            {(props) => (
+              <HomeScreen 
+                {...props} 
+                onLogout={handleLogout} 
+              />
+            )}
+          </Stack.Screen>
           <Stack.Screen 
             name="AddRecord" 
             component={AddRecordScreen} 

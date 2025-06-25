@@ -35,6 +35,8 @@ export interface NostrProfile {
   picture?: string;
   nip05?: string;
   lud16?: string;
+  website?: string;
+  banner?: string;
 }
 
 export interface StoredNostrCredentials {

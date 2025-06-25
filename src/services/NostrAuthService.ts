@@ -4,22 +4,15 @@ import {
   NostrEvent, 
   NostrAuthChallenge, 
   NostrAuthResponse,
-  StoredNostrCredentials 
+  StoredNostrCredentials,
+  NostrProfile
 } from '../types/nostr';
 
 // Use react-native-crypto for native crypto operations
 import CryptoJS from 'crypto-js';
 import { bech32 } from 'bech32';
 
-// Default MGit server URL
-const DEFAULT_SERVER_URL = 'http://localhost:3003';
-
 export class NostrAuthService {
-  private static serverUrl = DEFAULT_SERVER_URL;
-
-  static setServerUrl(url: string) {
-    this.serverUrl = url;
-  }
 
   /**
    * Generate a new NOSTR key pair using React Native crypto
@@ -103,109 +96,148 @@ export class NostrAuthService {
   }
 
   /**
-   * Sign challenge using stored credentials
+   * Fetch user profile from NOSTR relays
    */
-  static async signChallenge(challenge: string): Promise<NostrEvent | null> {
+  static async fetchUserProfile(publicKeyHex: string): Promise<NostrProfile | null> {
     try {
-      const credentials = await KeychainService.getNostrCredentials();
-      if (!credentials) {
-        throw new Error('No stored credentials found');
-      }
-
-      // Create event
-      const event = {
-        kind: 1,
-        content: challenge,
-        tags: [['challenge', challenge]],
-        created_at: Math.floor(Date.now() / 1000),
-        pubkey: credentials.publicKey,
-      };
-
-      // Create event hash (simplified)
-      const eventString = JSON.stringify([
-        0,
-        event.pubkey,
-        event.created_at,
-        event.kind,
-        event.tags,
-        event.content
-      ]);
+      console.log('Fetching profile for pubkey:', publicKeyHex.substring(0, 16) + '...');
       
-      const eventHash = CryptoJS.SHA256(eventString).toString(CryptoJS.enc.Hex);
-      
-      // Sign the hash
-      const signature = this.signHash(eventHash, credentials.privateKey);
+      // List of popular NOSTR relays
+      const relays = [
+        'wss://relay.damus.io',
+        'wss://nos.lol', 
+        'wss://relay.snort.social',
+        'wss://relay.nostr.band'
+      ];
 
-      return {
-        ...event,
-        id: eventHash,
-        sig: signature
-      };
+      return new Promise((resolve) => {
+        let resolved = false;
+        let connectionsActive = 0;
+        
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            console.log('Profile fetch timeout');
+            resolve(null);
+          }
+        }, 10000); // 10 second timeout
+
+        relays.forEach((relayUrl) => {
+          try {
+            const ws = new WebSocket(relayUrl);
+            connectionsActive++;
+            
+            ws.onopen = () => {
+              console.log('Connected to relay:', relayUrl);
+              
+              // Subscribe to user metadata (kind 0 events)
+              const subscription = {
+                id: 'profile_' + Math.random().toString(36).substring(7),
+                kinds: [0],
+                authors: [publicKeyHex],
+                limit: 1
+              };
+              
+              ws.send(JSON.stringify(['REQ', subscription.id, subscription]));
+            };
+            
+            ws.onmessage = (event) => {
+              try {
+                const message = JSON.parse(event.data);
+                
+                if (message[0] === 'EVENT' && message[2]?.kind === 0) {
+                  const profileEvent = message[2];
+                  const profile = JSON.parse(profileEvent.content);
+                  
+                  console.log('Found profile:', profile.name || profile.display_name || 'unnamed');
+                  
+                  if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timeout);
+                    resolve(profile);
+                  }
+                  
+                  ws.close();
+                }
+              } catch (error) {
+                console.error('Error parsing relay message:', error);
+              }
+            };
+            
+            ws.onerror = (error) => {
+              console.error('WebSocket error for', relayUrl, error);
+              connectionsActive--;
+              
+              if (connectionsActive === 0 && !resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                resolve(null);
+              }
+            };
+            
+            ws.onclose = () => {
+              connectionsActive--;
+              
+              if (connectionsActive === 0 && !resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                resolve(null);
+              }
+            };
+            
+          } catch (error) {
+            console.error('Failed to connect to relay:', relayUrl, error);
+            connectionsActive--;
+          }
+        });
+        
+        // If no connections were made
+        if (connectionsActive === 0) {
+          clearTimeout(timeout);
+          resolve(null);
+        }
+      });
+      
     } catch (error) {
-      console.error('Failed to sign challenge:', error);
+      console.error('Failed to fetch user profile:', error);
       return null;
     }
   }
 
   /**
-   * Authenticate with server
+   * Get current user's public key
    */
-  static async authenticateWithServer(): Promise<NostrAuthResponse> {
+  static async getCurrentUserPubkey(): Promise<string | null> {
+    const credentials = await KeychainService.getNostrCredentials();
+    return credentials ? credentials.npub : null;
+  }
+
+  /**
+   * Logout - clear all stored credentials and tokens
+   */
+  static async logout(): Promise<boolean> {
     try {
-      // Get challenge
-      const challengeResponse = await fetch(`${this.serverUrl}/api/auth/nostr/challenge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!challengeResponse.ok) {
-        throw new Error('Failed to get challenge');
-      }
-
-      const challengeData: NostrAuthChallenge = await challengeResponse.json();
-
-      // Sign challenge
-      const signedEvent = await this.signChallenge(challengeData.challenge);
-      if (!signedEvent) {
-        throw new Error('Failed to sign challenge');
-      }
-
-      // Verify with server
-      const verifyResponse = await fetch(`${this.serverUrl}/api/auth/nostr/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signedEvent }),
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error('Server rejected signature');
-      }
-
-      const authResult: NostrAuthResponse = await verifyResponse.json();
-
-      // Store token if successful
-      if (authResult.status === 'OK' && authResult.token) {
-        await KeychainService.storeServerToken(authResult.token);
-        
-        const credentials = await KeychainService.getNostrCredentials();
-        if (credentials) {
-          const updatedCredentials: StoredNostrCredentials = {
-            ...credentials,
-            lastLoginAt: new Date().toISOString(),
-            serverToken: authResult.token,
-          };
-          await KeychainService.storeNostrCredentials(updatedCredentials);
-        }
-      }
-
-      return authResult;
+      await KeychainService.deleteNostrCredentials();
+      return true;
     } catch (error) {
-      console.error('Authentication failed:', error);
-      return {
-        status: 'error',
-        reason: error instanceof Error ? error.message : 'Unknown error',
-      };
+      console.error('Failed to logout:', error);
+      return false;
     }
+  }
+
+  /**
+   * Store new NOSTR credentials (for first-time setup or key import)
+   */
+  static async storeCredentials(keyPair: NostrKeyPair): Promise<boolean> {
+    const credentials: StoredNostrCredentials = {
+      privateKey: keyPair.privateKey,
+      publicKey: keyPair.publicKey,
+      npub: keyPair.npub,
+      nsec: keyPair.nsec,
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    return await KeychainService.storeNostrCredentials(credentials);
   }
 
   // Helper methods (simplified implementations)
@@ -247,47 +279,5 @@ export class NostrAuthService {
       console.error('Bech32 decode error:', error);
       throw new Error(`Bech32 decode failed: ${error.message}`);
     }
-  }
-
-  private static signHash(hash: string, privateKeyHex: string): string {
-    // This is a PLACEHOLDER - you need proper ECDSA signing
-    // For now, just create a demo signature
-    const combined = hash + privateKeyHex;
-    return CryptoJS.SHA256(combined).toString(CryptoJS.enc.Hex);
-  }
-
-  // Standard methods
-  static async isAuthenticated(): Promise<boolean> {
-    const hasCredentials = await KeychainService.hasStoredCredentials();
-    const hasToken = await KeychainService.getServerToken();
-    return hasCredentials && !!hasToken;
-  }
-
-  static async getCurrentUserPubkey(): Promise<string | null> {
-    const credentials = await KeychainService.getNostrCredentials();
-    return credentials ? credentials.npub : null;
-  }
-
-  static async logout(): Promise<boolean> {
-    try {
-      await KeychainService.deleteNostrCredentials();
-      await KeychainService.deleteServerToken();
-      return true;
-    } catch (error) {
-      console.error('Failed to logout:', error);
-      return false;
-    }
-  }
-
-  static async storeCredentials(keyPair: NostrKeyPair): Promise<boolean> {
-    const credentials: StoredNostrCredentials = {
-      privateKey: keyPair.privateKey,
-      publicKey: keyPair.publicKey,
-      npub: keyPair.npub,
-      nsec: keyPair.nsec,
-      lastLoginAt: new Date().toISOString(),
-    };
-
-    return await KeychainService.storeNostrCredentials(credentials);
   }
 }
