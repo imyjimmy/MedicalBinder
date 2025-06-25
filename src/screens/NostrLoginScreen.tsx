@@ -263,7 +263,8 @@ export const NostrLoginScreen: React.FC<NostrLoginScreenProps> = ({ onLoginSucce
                   secureTextEntry={true}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  multiline={true}
+                  multiline={false}  // Keep this false
+                  scrollEnabled={true}
                   numberOfLines={3}
                 />
                 
