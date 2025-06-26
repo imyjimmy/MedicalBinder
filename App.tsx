@@ -5,7 +5,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { ProfileIcon } from './src/components/ProfileIcon';
 import { NostrLoginScreen } from './src/screens/NostrLoginScreen';
+import { NostrAuthService } from './src/services/NostrAuthService';
 import AddRecordScreen from './src/components/AddRecordScreen';
 import { KeychainService } from './src/services/KeychainService';
 
@@ -23,10 +25,21 @@ const Stack = createStackNavigator<RootStackParamList>();
 function App(): React.JSX.Element {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserPubkey, setCurrentUserPubkey] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthenticationStatus();
+    loadCurrentUser();
   }, []);
+  
+  const loadCurrentUser = async () => {
+    try {
+      const pubkey = await NostrAuthService.getCurrentUserPubkey();
+      setCurrentUserPubkey(pubkey);
+    } catch (error) {
+      console.error('Failed to load current user:', error);
+    }
+  };
 
   const checkAuthenticationStatus = async () => {
     try {
@@ -71,13 +84,17 @@ function App(): React.JSX.Element {
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Home">
-          <Stack.Screen 
+          <Stack.Screen
             name="Home" 
             options={{ 
               title: 'Medical Binder',
-              headerRight: () => (
-                <View style={{ marginRight: 15 }}>
-                  {/* You can add a profile/logout button here */}
+              headerShadowVisible: false,
+              headerLeft: () => (
+                <View style={{ marginLeft: 20 }}>
+                  <ProfileIcon 
+                    pubkey={currentUserPubkey} 
+                    onPress={handleLogout}
+                  />
                 </View>
               ),
             }}
