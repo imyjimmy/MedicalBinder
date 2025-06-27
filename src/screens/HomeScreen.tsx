@@ -4,10 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Modal,
   SafeAreaView,
   Image,
 } from 'react-native';
-import { ProfileIcon } from '../components/ProfileIcon';
+import { QRScanner } from '../components/QRScanner';
+import { ClonedRepo, ScanSuccessCallback } from '../types/git';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 import { useNavigation } from '@react-navigation/native';
@@ -20,26 +22,61 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [clonedRepos, setClonedRepos] = useState<Array<ClonedRepo>>([]);
+
+  const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token?: string) => {
+    setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date(), token: token }]);
+    setShowQRScanner(false);
+  };
+
+  const handleScanError = (error: string) => {
+    console.error('QR Scan Error:', error);
+    // Keep scanner open for retry
+  };
+
+  const navigateToAddRecord = (repo: ClonedRepo) => {
+    // Navigate to AddRecordScreen with repo details
+    console.log('Navigating with repo:', repo);
+    console.log('Repo path:', repo.path);
+
+    navigation.navigate('AddRecord', { 
+      repoPath: repo.path,
+      repoName: repo.name
+    });
+  };
 
   const handleAddMedicalBinder = () => {
     // TODO: Navigate to create/add medical binder flow
     console.log('Add Medical Binder pressed');
+    setShowQRScanner(true);
     // For now, you might want to navigate to QR scanner or create repo flow
     // navigation.navigate('CreateBinder');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Profile Icon */}
-      <View style={styles.header}>
-        {/* <ProfileIcon 
-          pubkey={currentUserPubkey} 
-          onPress={onLogout}
-        /> */}
-      </View>
-
+      
       {/* Main Content Area */}
       <View style={styles.content}>
+        {clonedRepos.map((repo, index) => (
+          <View key={index} style={styles.repoItem}>
+            <View style={styles.repoInfo}>
+              <Text style={styles.repoName}>{repo.name}</Text>
+              <Text style={styles.repoPath}>{repo.path}</Text>
+            </View>
+            <View style={styles.binderOpenContainer}>
+              {/* Circular Open Button */}
+              <TouchableOpacity 
+                style={styles.openButton}
+                onPress={() => navigateToAddRecord(repo)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.openButtonText}>Open 📖</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
         {/* Centered Add Button in Lower Third */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
@@ -51,33 +88,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
           </TouchableOpacity>
         </View>
       </View>
+      <Modal
+        visible={showQRScanner}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <QRScanner
+          onScanSuccess={handleScanSuccess}
+          onScanError={handleScanError}
+          onClose={() => setShowQRScanner(false)}
+        />
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  binderOpenContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end'
+  },
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
   content: {
     flex: 1,
-    justifyContent: 'flex-end', // Changed from 'center'
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 30,
   },
   buttonContainer: {
     width: '100%',
-    // Position much lower - about 20% from bottom
     marginBottom: '10%',
+    marginTop: 18,
     alignItems: 'center',
   },
   addButton: {
@@ -95,8 +139,83 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
   },
+  openButton: {
+    // width: 44,
+    width: '40%',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  openButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  repoInfo: {
+    // flex: 1,
+    // marginRight: 12,
+  },
+  repoItem: {
+    flexDirection: 'column',
+    // alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    width: '100%',
+    height: '20%',
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#757575',
+    borderStyle: 'solid',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 6, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  repoName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  repoPath: {
+    fontSize: 8,
+    color: '#666',
+  },
 });
+
+{/* <View style={styles.buttonContainer}>
+  <TouchableOpacity
+    style={styles.addRecordButton}
+    onPress={() => navigateToAddRecord(repo)}
+  >
+    <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
+  </TouchableOpacity>
+  
+  <TouchableOpacity
+    style={[
+      styles.pushButton, 
+      isPushing[repo.name] && styles.pushButtonDisabled
+    ]}
+    onPress={() => handlePushRepo(repo)}
+    disabled={isPushing[repo.name]}
+  >
+    <Text style={styles.pushButtonText}>
+      {isPushing[repo.name] ? '⏳ Pushing...' : '📤 Push'}
+    </Text>
+  </TouchableOpacity>
+</View> */}
