@@ -24,6 +24,7 @@ export type RootStackParamList = {
   OpenedBinder: {  // Add this
     repoPath: string;
     repoName: string;
+    sharedElementId: string;
   };
 };
 
@@ -118,6 +119,26 @@ function App(): React.JSX.Element {
           />
           <Stack.Screen 
             name="OpenedBinder" 
+            component={OpenedBinderScreen}
+            sharedElements={(route) => {
+              const { sharedElementId } = route.params;
+              return [sharedElementId];
+            }}
+            options={{
+              title: 'Medical Binder',
+              //headerShown: false,
+              headerLeft: () => (
+                <View style={{ marginLeft: 20 }}>
+                  <ProfileIcon 
+                    pubkey={currentUserPubkey} 
+                    onPress={handleLogout}
+                  />
+                </View>
+              ),
+            }}
+          />
+          {/* <Stack.Screen 
+            name="OpenedBinder" 
             component={OpenedBinderScreen}  // You'll need to create this
             options={{
               title: 'Medical Binder',
@@ -127,7 +148,7 @@ function App(): React.JSX.Element {
               //   close: binderTransitionSpec,
               // },
             }}
-          />
+          /> */}
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

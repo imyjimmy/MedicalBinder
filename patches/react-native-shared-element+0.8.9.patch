@@ -122,3 +122,16 @@ index 97de533..dbd1d66 100644
      }
    };
    self.onMeasureNode(eventData);
+diff --git a/node_modules/react-native-shared-element/ios/RNSharedElementTransitionManager.m b/node_modules/react-native-shared-element/ios/RNSharedElementTransitionManager.m
+index 4365f0e..759d730 100644
+--- a/node_modules/react-native-shared-element/ios/RNSharedElementTransitionManager.m
++++ b/node_modules/react-native-shared-element/ios/RNSharedElementTransitionManager.m
+@@ -32,7 +32,7 @@ - (UIView *)view
+ 
+ - (dispatch_queue_t)methodQueue
+ {
+-  return self.bridge.uiManager.methodQueue;
++  return dispatch_get_main_queue();
+ }
+ 
+ - (RNSharedElementNode*) nodeFromJson:(NSDictionary*)json

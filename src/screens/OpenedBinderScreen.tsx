@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { SharedElement } from 'react-native-shared-element';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 
@@ -8,15 +9,21 @@ interface OpenedBinderScreenProps {
 }
 
 export const OpenedBinderScreen: React.FC<OpenedBinderScreenProps> = ({ route }) => {
-  const { repoPath, repoName } = route.params;
+  const { repoPath, repoName, sharedElementId } = route.params;
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{repoName}</Text>
-        <Text style={styles.subtitle}>Opened Binder</Text>
-        {/* Add your binder content here */}
-      </View>
+      <SharedElement 
+        id={sharedElementId}
+        style={styles.expandedBinder}
+        onNode={(node) => {}}
+      >
+        <View style={styles.binderContent}>
+          <Text style={styles.title}>{repoName}</Text>
+          <Text style={styles.subtitle}>Medical Records</Text>
+          {/* Add your binder content here */}
+        </View>
+      </SharedElement>
     </SafeAreaView>
   );
 };
@@ -26,7 +33,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  content: {
+  expandedBinder: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  binderContent: {
     flex: 1,
     padding: 20,
   },
@@ -34,6 +45,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: '#333',
   },
   subtitle: {
     fontSize: 16,

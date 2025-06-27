@@ -47,12 +47,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     });
   };
 
-  const navigateToOpenedBinder = (repo: ClonedRepo) => {
+  const navigateToOpenedBinder = (repo: ClonedRepo, index: number) => {
     console.log('Opening binder:', repo);
     
     navigation.navigate('OpenedBinder', { 
       repoPath: repo.path,
-      repoName: repo.name
+      repoName: repo.name,
+      sharedElementId: `binder-${index}`,
     });
   };
 
@@ -87,7 +88,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                 {/* Circular Open Button */}
                 <TouchableOpacity 
                   style={styles.openButton}
-                  onPress={() => navigateToOpenedBinder(repo)}
+                  onPress={() => navigateToOpenedBinder(repo, index)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.openButtonText}>Open 📖</Text>

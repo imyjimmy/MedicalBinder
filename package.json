@@ -16,7 +16,8 @@
     "clean:ios": "cd ios && rm -rf build/ && rm -rf Pods/ && rm -f Podfile.lock && cd ..",
     "clean:modules": "rm -rf node_modules/ && yarn install",
     "clean:rebuild": "yarn clean && cd ios && pod install && cd .. && yarn ios",
-    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:simulator"
+    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:simulator",
+    "postinstall": "npx patch-package"
   },
   "dependencies": {
     "@noble/secp256k1": "^2.0.0",
