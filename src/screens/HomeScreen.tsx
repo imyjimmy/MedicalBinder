@@ -12,6 +12,7 @@ import { QRScanner } from '../components/QRScanner';
 import { ClonedRepo, ScanSuccessCallback } from '../types/git';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
+import { SharedElement } from 'react-native-shared-element';
 import { useNavigation } from '@react-navigation/native';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
@@ -46,6 +47,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     });
   };
 
+  const navigateToOpenedBinder = (repo: ClonedRepo) => {
+    console.log('Opening binder:', repo);
+    
+    navigation.navigate('OpenedBinder', { 
+      repoPath: repo.path,
+      repoName: repo.name
+    });
+  };
+
   const handleAddMedicalBinder = () => {
     // TODO: Navigate to create/add medical binder flow
     console.log('Add Medical Binder pressed');
@@ -60,22 +70,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       {/* Main Content Area */}
       <View style={styles.content}>
         {clonedRepos.map((repo, index) => (
-          <View key={index} style={styles.repoItem}>
-            <View style={styles.repoInfo}>
-              <Text style={styles.repoName}>{repo.name}</Text>
-              <Text style={styles.repoPath}>{repo.path}</Text>
+          <SharedElement
+            style={styles.repoItem}
+            id={`binder-${index}`} 
+            key={index} 
+            onNode={(node) => {
+              // This callback provides the node reference for the shared element system
+              // Usually you don't need to do anything here unless you need custom behavior
+          }}>
+            <View key={index}>
+              <View style={styles.repoInfo}>
+                <Text style={styles.repoName}>{repo.name}</Text>
+                <Text style={styles.repoPath}>{repo.path}</Text>
+              </View>
+              <View style={styles.binderOpenContainer}>
+                {/* Circular Open Button */}
+                <TouchableOpacity 
+                  style={styles.openButton}
+                  onPress={() => navigateToOpenedBinder(repo)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.openButtonText}>Open 📖</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.binderOpenContainer}>
-              {/* Circular Open Button */}
-              <TouchableOpacity 
-                style={styles.openButton}
-                onPress={() => navigateToAddRecord(repo)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.openButtonText}>Open 📖</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </SharedElement>
         ))}
         {/* Centered Add Button in Lower Third */}
         <View style={styles.buttonContainer}>

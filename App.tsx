@@ -2,14 +2,17 @@ import './src/polyfills'; // Import polyfills first
 import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createSharedElementStackNavigator } from 'react-navigation-shared-element';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ProfileIcon } from './src/components/ProfileIcon';
 import { NostrLoginScreen } from './src/screens/NostrLoginScreen';
 import { NostrAuthService } from './src/services/NostrAuthService';
 import AddRecordScreen from './src/components/AddRecordScreen';
+import { OpenedBinderScreen } from './src/screens/OpenedBinderScreen';
 import { KeychainService } from './src/services/KeychainService';
+
+// import { binderExpandTransition, binderTransitionSpec } from './src/animations/binderTransition';
 
 // Define your navigation params
 export type RootStackParamList = {
@@ -18,9 +21,13 @@ export type RootStackParamList = {
     repoPath: string;
     repoName: string;
   };
+  OpenedBinder: {  // Add this
+    repoPath: string;
+    repoName: string;
+  };
 };
 
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createSharedElementStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -80,12 +87,17 @@ function App(): React.JSX.Element {
     );
   }
 
+  const HomeScreenWrapper = (props: any) => (
+    <HomeScreen {...props} onLogout={handleLogout} />
+  );
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Home">
           <Stack.Screen
             name="Home" 
+            component={HomeScreenWrapper}
             options={{ 
               title: 'Medical Binder',
               headerShadowVisible: false,
@@ -98,18 +110,23 @@ function App(): React.JSX.Element {
                 </View>
               ),
             }}
-          >
-            {(props) => (
-              <HomeScreen 
-                {...props} 
-                onLogout={handleLogout} 
-              />
-            )}
-          </Stack.Screen>
+          />
           <Stack.Screen 
             name="AddRecord" 
             component={AddRecordScreen} 
             options={{ title: 'Add Medical Record' }}
+          />
+          <Stack.Screen 
+            name="OpenedBinder" 
+            component={OpenedBinderScreen}  // You'll need to create this
+            options={{
+              title: 'Medical Binder',
+              // cardStyleInterpolator: binderExpandTransition,
+              // transitionSpec: {
+              //   open: binderTransitionSpec,
+              //   close: binderTransitionSpec,
+              // },
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>
