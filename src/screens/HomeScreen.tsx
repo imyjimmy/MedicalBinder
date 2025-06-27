@@ -79,7 +79,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               // This callback provides the node reference for the shared element system
               // Usually you don't need to do anything here unless you need custom behavior
           }}>
-            <View key={index}>
+            {/* <View key={index}> */}
               <View style={styles.repoInfo}>
                 <Text style={styles.repoName}>{repo.name}</Text>
                 <Text style={styles.repoPath}>{repo.path}</Text>
@@ -94,7 +94,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                   <Text style={styles.openButtonText}>Open 📖</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            {/* </View> */}
           </SharedElement>
         ))}
         {/* Centered Add Button in Lower Third */}
@@ -195,6 +195,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '20%',
     padding: 15,
+    paddingBottom: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#757575',

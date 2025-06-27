@@ -101,7 +101,7 @@ function App(): React.JSX.Element {
             component={HomeScreenWrapper}
             options={{ 
               title: 'Medical Binder',
-              headerShadowVisible: false,
+              headerShadowVisible: false, // get rid of grey horizontal line
               headerLeft: () => (
                 <View style={{ marginLeft: 20 }}>
                   <ProfileIcon 
@@ -127,6 +127,7 @@ function App(): React.JSX.Element {
             options={{
               title: 'Medical Binder',
               //headerShown: false,
+              headerShadowVisible: false,
               headerLeft: () => (
                 <View style={{ marginLeft: 20 }}>
                   <ProfileIcon 
