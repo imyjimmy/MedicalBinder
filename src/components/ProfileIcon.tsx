@@ -10,128 +10,38 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import { NostrAuthService } from '../services/NostrAuthService';
 import { NostrKeyManager } from './NostrKeyManager';
 import { NostrProfile } from '../types/nostr';
-import { bech32 } from 'bech32';
+import { ProfileService } from '../services/ProfileService';
 
 interface ProfileIconProps {
   pubkey: string | null;
   onPress: () => void;
 }
 
-function bech32ToHex(bech32Str: string): string {
-  const decoded = bech32.decode(bech32Str);
-  const bytes = bech32.fromWords(decoded.words);
-  if (bytes.length !== 32) throw new Error('Invalid public key length');  
-  return bytes.map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function fetchNostrMetadata(pubkey: string, timeoutMs = 10000): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const relays = [
-      'wss://relay.damus.io',
-      'wss://nos.lol',
-      'wss://relay.snort.social',
-      'wss://relay.nostr.band'
-    ];
-    
-    let currentRelayIndex = 0;
-    
-    function tryNextRelay() {
-      if (currentRelayIndex >= relays.length) {
-        reject(new Error('All relays failed to provide metadata'));
-        return;
-      }
-      
-      const relayUrl = relays[currentRelayIndex++];
-      console.log(`Trying relay: ${relayUrl}`);
-      
-      tryFetchFromRelay(relayUrl, pubkey, timeoutMs / relays.length)
-        .then(resolve)
-        .catch((error) => {
-          console.log(`Relay ${relayUrl} failed: ${error.message}`);
-          tryNextRelay();
-        });
-    }
-    
-    tryNextRelay();
-  });
-}
-
-function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: number): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(relayUrl);
-    let resolved = false;
-    
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        ws.close();
-        reject(new Error('Timeout'));
-      }
-    }, timeoutMs);
-    
-    ws.onopen = () => {
-      console.log('Connected to relay:', relayUrl);
-      
-      const subscription = {
-        id: 'profile_' + Math.random().toString(36).substring(7),
-        kinds: [0],
-        authors: [hexPubkey],
-        limit: 1
-      };
-      
-      ws.send(JSON.stringify(['REQ', subscription.id, subscription]));
-    };
-    
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        
-        if (message[0] === 'EVENT' && message[2]?.kind === 0) {
-          const profileEvent = message[2];
-          const profile = JSON.parse(profileEvent.content);
-          
-          console.log('Found profile:', profile.name || profile.display_name || 'unnamed');
-          
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeout);
-            ws.close();
-            resolve(profile);
-          }
-        }
-      } catch (error) {
-        console.error('Error parsing relay message:', error);
-      }
-    };
-    
-    ws.onerror = (error) => {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timeout);
-        reject(new Error('WebSocket error'));
-      }
-    };
-    
-    ws.onclose = () => {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timeout);
-        reject(new Error('Connection closed'));
-      }
-    };
-  });
-}
-
 export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => {
-  const [profile, setProfile] = useState<NostrProfile | null>(null);
+  const [profile, setProfile] = useState<NostrProfile | null>(() => 
+    pubkey ? ProfileService.getCachedProfile(pubkey) : null
+  );
   const [loading, setLoading] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
 
+  // useEffect(() => {
+  //   if (pubkey) {
+  //     fetchProfile();
+  //   }
+  // }, [pubkey]);
+
   useEffect(() => {
     if (pubkey) {
+      // Check cache first before setting loading state
+      const fetchProfile = async () => {
+        const cachedProfile = await ProfileService.getProfile(pubkey);
+        if (cachedProfile !== profile) {
+          setProfile(cachedProfile);
+        }
+      };
+      
       fetchProfile();
     }
   }, [pubkey]);
@@ -141,15 +51,7 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
     
     setLoading(true);
     try {
-      console.log('🔍 Fetching profile for pubkey:', pubkey.substring(0, 20) + '...');
-      
-      // Convert npub to hex
-      const hexPubkey = bech32ToHex(pubkey);
-      console.log('🔑 Converted to hex:', hexPubkey.substring(0, 20) + '...');
-      
-      // Fetch profile using hex pubkey
-      const userProfile = await fetchNostrMetadata(hexPubkey);
-      console.log('👤 Profile result:', userProfile ? 'Found profile' : 'No profile found');
+      const userProfile = await ProfileService.getProfile(pubkey);
       setProfile(userProfile);
     } catch (error) {
       console.error('Failed to fetch profile:', error);

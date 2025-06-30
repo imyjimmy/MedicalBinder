@@ -1,5 +1,5 @@
 import './src/polyfills'; // Import polyfills first
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createSharedElementStackNavigator } from 'react-navigation-shared-element';
@@ -34,6 +34,15 @@ function App(): React.JSX.Element {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserPubkey, setCurrentUserPubkey] = useState<string | null>(null);
+
+  const headerProfileIcon = useMemo(() => (
+    <View style={{ marginLeft: 20 }}>
+      <ProfileIcon 
+        pubkey={currentUserPubkey} 
+        onPress={handleLogout}
+      />
+    </View>
+  ), [currentUserPubkey]);
 
   useEffect(() => {
     checkAuthenticationStatus();
@@ -102,14 +111,7 @@ function App(): React.JSX.Element {
             options={{ 
               title: 'Medical Binder',
               headerShadowVisible: false, // get rid of grey horizontal line
-              // headerLeft: () => (
-              //   <View style={{ marginLeft: 20 }}>
-              //     <ProfileIcon 
-              //       pubkey={currentUserPubkey} 
-              //       onPress={handleLogout}
-              //     />
-              //   </View>
-              // ),
+              headerLeft: () => headerProfileIcon,
             }}
           />
           <Stack.Screen 
@@ -136,39 +138,12 @@ function App(): React.JSX.Element {
                 }
               ];
             }}
-            options={{
-              title: 'Medical Binder',
+            options={({ route }) => ({
+              title: route.params.repoName,
               headerShadowVisible: false,
-              // transitionSpec: {
-              //   open: {
-              //     animation: 'timing',
-              //     config: {
-              //       duration: 2000, // 3 seconds - super slow
-              //       // useNativeDriver: true,
-              //     },
-              //   },
-              //   close: {
-              //     animation: 'timing',
-              //     config: {
-              //       duration: 2000, // 3 seconds - super slow
-              //       // useNativeDriver: true,
-              //     },
-              //   },
-              // },
-            }}
+              headerLeft: () => headerProfileIcon,
+            })}
           />
-          {/* <Stack.Screen 
-            name="OpenedBinder" 
-            component={OpenedBinderScreen}  // You'll need to create this
-            options={{
-              title: 'Medical Binder',
-              // cardStyleInterpolator: binderExpandTransition,
-              // transitionSpec: {
-              //   open: binderTransitionSpec,
-              //   close: binderTransitionSpec,
-              // },
-            }}
-          /> */}
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

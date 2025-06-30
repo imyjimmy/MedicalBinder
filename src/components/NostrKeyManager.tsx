@@ -134,7 +134,7 @@ export const NostrKeyManager: React.FC<NostrKeyManagerProps> = ({ onLogout }) =>
       </View>
 
       <View style={styles.keySection}>
-        <Text style={styles.keyLabel}>Last Login</Text>
+        <Text style={styles.keyLabel}>Keys Imported</Text>
         <Text style={styles.infoText}>
           {new Date(credentials.lastLoginAt).toLocaleDateString()}
         </Text>
