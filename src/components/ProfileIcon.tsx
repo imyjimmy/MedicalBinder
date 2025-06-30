@@ -27,7 +27,7 @@ function bech32ToHex(bech32Str: string): string {
   return bytes.map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function fetchNostrMetadata(pubkey: string, timeoutMs = 10000): Promise<any> {
+function fetchNostrMetadata(pubkey: string, timeoutMs = 30000): Promise<any> {
   return new Promise((resolve, reject) => {
     const relays = [
       'wss://relay.damus.io',
@@ -59,14 +59,82 @@ function fetchNostrMetadata(pubkey: string, timeoutMs = 10000): Promise<any> {
   });
 }
 
-function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: number): Promise<any> {
+// function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: number): Promise<any> {
+//   return new Promise((resolve, reject) => {
+//     const ws = new WebSocket(relayUrl);
+//     let resolved = false;
+    
+//     const timeout = setTimeout(() => {
+//       if (!resolved) {
+//         resolved = true;
+//         ws.close();
+//         reject(new Error('Timeout'));
+//       }
+//     }, timeoutMs);
+    
+//     ws.onopen = () => {
+//       console.log('Connected to relay:', relayUrl);
+      
+//       const subscription = {
+//         id: 'profile_' + Math.random().toString(36).substring(7),
+//         kinds: [0],
+//         authors: [hexPubkey],
+//         limit: 1
+//       };
+      
+//       ws.send(JSON.stringify(['REQ', subscription.id, subscription]));
+//     };
+    
+//     ws.onmessage = (event) => {
+//       try {
+//         const message = JSON.parse(event.data);
+        
+//         if (message[0] === 'EVENT' && message[2]?.kind === 0) {
+//           const profileEvent = message[2];
+//           const profile = JSON.parse(profileEvent.content);
+          
+//           console.log('Found profile:', profile.name || profile.display_name || 'unnamed');
+          
+//           if (!resolved) {
+//             resolved = true;
+//             clearTimeout(timeout);
+//             ws.close();
+//             resolve(profile);
+//           }
+//         }
+//       } catch (error) {
+//         console.error('Error parsing relay message:', error);
+//       }
+//     };
+    
+//     ws.onerror = (error) => {
+//       if (!resolved) {
+//         resolved = true;
+//         clearTimeout(timeout);
+//         reject(new Error('WebSocket error'));
+//       }
+//     };
+    
+//     ws.onclose = () => {
+//       if (!resolved) {
+//         resolved = true;
+//         clearTimeout(timeout);
+//         reject(new Error('Connection closed'));
+//       }
+//     };
+//   });
+// }
+
+function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: number): Promise<NostrProfile | null> {
   return new Promise((resolve, reject) => {
+    console.log(`🔌 Attempting connection to ${relayUrl} with ${timeoutMs}ms timeout`);
     const ws = new WebSocket(relayUrl);
     let resolved = false;
     
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
+        console.log(`⏰ Timeout reached for ${relayUrl}`);
         ws.close();
         reject(new Error('Timeout'));
       }
@@ -75,19 +143,21 @@ function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: numbe
     ws.onopen = () => {
       console.log('Connected to relay:', relayUrl);
       
+      const subscriptionId = 'profile_' + Math.random().toString(36).substring(7); // ← ADD THIS LINE
       const subscription = {
-        id: 'profile_' + Math.random().toString(36).substring(7),
         kinds: [0],
         authors: [hexPubkey],
         limit: 1
       };
       
-      ws.send(JSON.stringify(['REQ', subscription.id, subscription]));
+      console.log('📤 Sending query to', relayUrl, ':', JSON.stringify(['REQ', subscriptionId, subscription]));
+      ws.send(JSON.stringify(['REQ', subscriptionId, subscription]));
     };
-    
+
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log('📨 Received message from', relayUrl, ':', JSON.stringify(message));
         
         if (message[0] === 'EVENT' && message[2]?.kind === 0) {
           const profileEvent = message[2];
@@ -101,6 +171,10 @@ function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: numbe
             ws.close();
             resolve(profile);
           }
+        } else if (message[0] === 'EOSE') {
+          console.log('📝 End of stored events from', relayUrl, '- no profile found');
+        } else if (message[0] === 'NOTICE') {
+          console.log('⚠️ Notice from', relayUrl, ':', message[1]);
         }
       } catch (error) {
         console.error('Error parsing relay message:', error);
@@ -108,27 +182,58 @@ function tryFetchFromRelay(relayUrl: string, hexPubkey: string, timeoutMs: numbe
     };
     
     ws.onerror = (error) => {
+      console.log(`❌ WebSocket error for ${relayUrl}:`, error);
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
         reject(new Error('WebSocket error'));
       }
     };
-    
-    ws.onclose = () => {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timeout);
-        reject(new Error('Connection closed'));
-      }
-    };
-  });
+  })
 }
 
 export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => {
   const [profile, setProfile] = useState<NostrProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
+
+  const testBasicWebSocket = () => {
+    console.log('🧪 Testing basic WebSocket connectivity...');
+    const ws = new WebSocket('wss://echo.websocket.org');
+    
+    const timeout = setTimeout(() => {
+      console.log('❌ Echo test timeout');
+      ws.close();
+    }, 5000);
+    
+    ws.onopen = () => {
+      console.log('✅ Echo WebSocket connected successfully');
+      clearTimeout(timeout);
+      ws.send('test message');
+    };
+    
+    ws.onmessage = (event) => {
+      console.log('📨 Echo response:', event.data);
+      ws.close();
+    };
+    
+    ws.onerror = (error) => {
+      console.log('❌ Echo WebSocket error:', error);
+      clearTimeout(timeout);
+    };
+    
+    ws.onclose = () => {
+      console.log('🔌 Echo WebSocket closed');
+    };
+  };
+
+  // Call this in useEffect to test
+  useEffect(() => {
+    if (pubkey) {
+      testBasicWebSocket(); // Add this line temporarily
+      fetchProfile();
+    }
+  }, [pubkey]);
 
   useEffect(() => {
     if (pubkey) {
