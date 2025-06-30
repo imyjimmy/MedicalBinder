@@ -110,14 +110,14 @@ class ProfileServiceClass {
       ws.onopen = () => {
         console.log('Connected to relay:', relayUrl);
         
+        const subscription_id = 'profile_' + Math.random().toString(36).substring(7);
         const subscription = {
-          id: 'profile_' + Math.random().toString(36).substring(7),
           kinds: [0],
           authors: [hexPubkey],
           limit: 1
         };
         
-        ws.send(JSON.stringify(['REQ', subscription.id, subscription]));
+        ws.send(JSON.stringify(['REQ', subscription_id, subscription]));
       };
       
       ws.onmessage = (event) => {
