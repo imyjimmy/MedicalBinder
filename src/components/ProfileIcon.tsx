@@ -141,14 +141,14 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
     
     setLoading(true);
     try {
-      console.log('🔍 Fetching profile for pubkey:', pubkey.substring(0, 20) + '...');
+      console.log('🔍 Fetching profile for pubkey: ...', pubkey.slice(-6));
       
       // Convert npub to hex
       const hexPubkey = bech32ToHex(pubkey);
-      console.log('🔑 Converted to hex:', hexPubkey.substring(0, 20) + '...');
+      console.log('🔑 Converted to hex: ...', hexPubkey.slice(-6), ' pubkey: ', pubkey);
       
       // Fetch profile using hex pubkey
-      const userProfile = await fetchNostrMetadata(hexPubkey);
+      const userProfile = await fetchNostrMetadata(pubkey);
       console.log('👤 Profile result:', userProfile ? 'Found profile' : 'No profile found');
       setProfile(userProfile);
     } catch (error) {

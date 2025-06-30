@@ -102,14 +102,14 @@ function App(): React.JSX.Element {
             options={{ 
               title: 'Medical Binder',
               headerShadowVisible: false, // get rid of grey horizontal line
-              // headerLeft: () => (
-              //   <View style={{ marginLeft: 20 }}>
-              //     <ProfileIcon 
-              //       pubkey={currentUserPubkey} 
-              //       onPress={handleLogout}
-              //     />
-              //   </View>
-              // ),
+              headerLeft: () => (
+                <View style={{ marginLeft: 20 }}>
+                  <ProfileIcon 
+                    pubkey={currentUserPubkey} 
+                    onPress={handleLogout}
+                  />
+                </View>
+              ),
             }}
           />
           <Stack.Screen 
@@ -136,39 +136,23 @@ function App(): React.JSX.Element {
                 }
               ];
             }}
-            options={{
-              title: 'Medical Binder',
+            options={({ route }) => ({
+              title: route.params.repoName,
               headerShadowVisible: false,
-              // transitionSpec: {
-              //   open: {
-              //     animation: 'timing',
-              //     config: {
-              //       duration: 2000, // 3 seconds - super slow
-              //       // useNativeDriver: true,
-              //     },
-              //   },
-              //   close: {
-              //     animation: 'timing',
-              //     config: {
-              //       duration: 2000, // 3 seconds - super slow
-              //       // useNativeDriver: true,
-              //     },
-              //   },
-              // },
-            }}
+              headerLeft: () => (
+                <View style={{ marginLeft: 20 }}>
+                  <ProfileIcon 
+                    pubkey={currentUserPubkey} 
+                    onPress={handleLogout}
+                  />
+                </View>
+              ),
+              headerTitleStyle: {
+                fontSize: 12,        // Smaller font size
+                fontWeight: '200',   // Adjust weight if needed
+              },
+            })}
           />
-          {/* <Stack.Screen 
-            name="OpenedBinder" 
-            component={OpenedBinderScreen}  // You'll need to create this
-            options={{
-              title: 'Medical Binder',
-              // cardStyleInterpolator: binderExpandTransition,
-              // transitionSpec: {
-              //   open: binderTransitionSpec,
-              //   close: binderTransitionSpec,
-              // },
-            }}
-          /> */}
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

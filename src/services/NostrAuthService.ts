@@ -96,7 +96,7 @@ export class NostrAuthService {
       const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes);
       const publicKeyHex = bytesToHex(publicKeyBytes);
 
-      console.log('Generated public key:', publicKeyHex.substring(0, 16) + '...');
+      console.log('Generated public key:', '...' + encodeNpub(publicKeyHex).slice(-6));
 
       return {
         privateKey: hexPrivateKey,
