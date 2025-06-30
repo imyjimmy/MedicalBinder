@@ -10,18 +10,18 @@ interface OpenedBinderScreenProps {
 
 export const OpenedBinderScreen: React.FC<OpenedBinderScreenProps> = ({ route }) => {
   const { repoPath, repoName, sharedElementId } = route.params;
-
+  
   return (
     <SafeAreaView style={styles.container}>
       <SharedElement 
         id={sharedElementId}
-        style={styles.expandedBinder}
-        onNode={(node) => {}}
+        onNode={(node) => {
+          console.log('📖 OpenedBinderScreen SharedElement registered:', sharedElementId, !!node);
+        }}
       >
-        <View style={styles.binderContent}>
+        <View style={styles.expandedBinderCard}>
           <Text style={styles.title}>{repoName}</Text>
           <Text style={styles.subtitle}>Medical Records</Text>
-          {/* Add your binder content here */}
         </View>
       </SharedElement>
     </SafeAreaView>
@@ -33,22 +33,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  expandedBinder: {
+  expandedBinderCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  binderContent: {
-    flex: 1,
-    padding: 20,
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#757575',
+    margin: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: '600',
     color: '#333',
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#666',
   },
 });

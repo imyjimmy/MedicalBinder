@@ -49,7 +49,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
   const navigateToOpenedBinder = (repo: ClonedRepo, index: number) => {
     console.log('Opening binder:', repo);
-    
+    console.log('Navigating with shared element ID:', `binder-${index}`);
+
     navigation.navigate('OpenedBinder', { 
       repoPath: repo.path,
       repoName: repo.name,
@@ -76,9 +77,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
             id={`binder-${index}`} 
             key={index} 
             onNode={(node) => {
-              // This callback provides the node reference for the shared element system
-              // Usually you don't need to do anything here unless you need custom behavior
-          }}>
+              console.log('🏠 HomeScreen SharedElement registered:', `binder-${index}`, !!node);
+            }}>
             {/* <View key={index}> */}
               <View style={styles.repoInfo}>
                 <Text style={styles.repoName}>{repo.name}</Text>

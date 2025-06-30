@@ -102,14 +102,14 @@ function App(): React.JSX.Element {
             options={{ 
               title: 'Medical Binder',
               headerShadowVisible: false, // get rid of grey horizontal line
-              headerLeft: () => (
-                <View style={{ marginLeft: 20 }}>
-                  <ProfileIcon 
-                    pubkey={currentUserPubkey} 
-                    onPress={handleLogout}
-                  />
-                </View>
-              ),
+              // headerLeft: () => (
+              //   <View style={{ marginLeft: 20 }}>
+              //     <ProfileIcon 
+              //       pubkey={currentUserPubkey} 
+              //       onPress={handleLogout}
+              //     />
+              //   </View>
+              // ),
             }}
           />
           <Stack.Screen 
@@ -120,22 +120,41 @@ function App(): React.JSX.Element {
           <Stack.Screen 
             name="OpenedBinder" 
             component={OpenedBinderScreen}
-            sharedElements={(route) => {
+            sharedElements={(route, otherRoute, showing) => {
+              console.log('=== SHARED ELEMENT DEBUG ===');
+              console.log('route:', route?.name, route?.params);
+              console.log('otherRoute:', otherRoute?.name, otherRoute?.params);
+              console.log('showing:', showing);
+              console.log('=== END DEBUG ===');
               const { sharedElementId } = route.params;
-              return [sharedElementId];
+              return [
+                {
+                  id: sharedElementId,
+                  animation: 'fade',
+                  resize: 'auto',  // Try 'auto' instead of 'stretch'
+                  align: 'auto'
+                }
+              ];
             }}
             options={{
               title: 'Medical Binder',
-              //headerShown: false,
               headerShadowVisible: false,
-              headerLeft: () => (
-                <View style={{ marginLeft: 20 }}>
-                  <ProfileIcon 
-                    pubkey={currentUserPubkey} 
-                    onPress={handleLogout}
-                  />
-                </View>
-              ),
+              // transitionSpec: {
+              //   open: {
+              //     animation: 'timing',
+              //     config: {
+              //       duration: 2000, // 3 seconds - super slow
+              //       // useNativeDriver: true,
+              //     },
+              //   },
+              //   close: {
+              //     animation: 'timing',
+              //     config: {
+              //       duration: 2000, // 3 seconds - super slow
+              //       // useNativeDriver: true,
+              //     },
+              //   },
+              // },
             }}
           />
           {/* <Stack.Screen 
