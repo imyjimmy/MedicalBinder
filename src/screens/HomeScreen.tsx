@@ -63,6 +63,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   //   setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date(), token: token }]);
   //   setShowQRScanner(false);
   // };
+  const clearAllRepos = async () => {
+    try {
+      await AsyncStorage.removeItem('clonedRepos');
+      setClonedRepos([]);
+      console.log('Cleared all cloned repositories');
+    } catch (error) {
+      console.error('Failed to clear repos:', error);
+    }
+  };
+
+  const deleteRepo = async (index: number) => {
+    const updatedRepos = clonedRepos.filter((_, i) => i !== index);
+    setClonedRepos(updatedRepos);
+    await saveClonedRepos(updatedRepos);
+  };
 
   const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string) => {
     const newRepo = { name: name, url: repoUrl, path: localPath, clonedAt: new Date() };
@@ -118,15 +133,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     // navigation.navigate('CreateBinder');
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text>Loading medical binders...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <SafeAreaView style={styles.container}>
+  //       <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+  //         <Text>Loading medical binders...</Text>
+  //       </View>
+  //     </SafeAreaView>
+  //   );
+  // }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,6 +161,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                 <Text style={styles.repoPath}>{repo.path}</Text>
               </View>
               <View style={styles.binderOpenContainer}>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => deleteRepo(index)}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                </TouchableOpacity>
                 {/* Circular Open Button */}
                 <TouchableOpacity 
                   style={styles.openButton}
@@ -159,6 +180,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
           </SharedElement>
         ))}
         {/* Centered Add Button in Lower Third */}
+        {/* <TouchableOpacity
+          style={[styles.scanButton, { backgroundColor: '#FF3B30' }]}
+          onPress={clearAllRepos}
+        >
+          <Text style={styles.scanButtonText}>Clear All Repos</Text>
+        </TouchableOpacity> */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
             style={styles.addButton}
@@ -187,7 +214,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 const styles = StyleSheet.create({
   binderOpenContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end'
+    justifyContent: 'space-between'
   },
   container: {
     flex: 1,
@@ -204,6 +231,17 @@ const styles = StyleSheet.create({
     marginBottom: '10%',
     marginTop: 18,
     alignItems: 'center',
+  },
+  deleteButton: {
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 32,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    fontSize: 16,
   },
   addButton: {
     backgroundColor: '#007AFF',
@@ -277,6 +315,19 @@ const styles = StyleSheet.create({
   repoPath: {
     fontSize: 8,
     color: '#666',
+  },
+  scanButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 30,
+  },
+  scanButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
 
