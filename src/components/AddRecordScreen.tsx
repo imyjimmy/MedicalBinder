@@ -1,28 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import { NativeModules } from 'react-native';
-import RNFS from 'react-native-fs';
-
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  TextInput, 
+  TouchableOpacity, 
+  Alert, 
+  ScrollView 
+} from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
+import { NativeModules } from 'react-native';
+import RNFS from 'react-native-fs';
 
 const MGitModule = NativeModules.MGitModule;
 
 interface AddRecordScreenProps {
-  route: RouteProp<RootStackParamList, 'AddRecord'>;
+  route: RouteProp<RootStackParamList, 'ActiveBinder'>;
 }
 
-export default function AddRecordScreen({ route }: AddRecordScreenProps) {
-  console.log('AddRecordScreen route params:', route.params);
+export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   const { repoPath, repoName } = route.params;
   const [recordText, setRecordText] = useState('');
-  const [nostrPubkey, setNostrPubkey] = useState('npub19jlhl9twyjajarvrjeeh75a5ylzngv4tj8y9wgffsguylz9eh73qd85aws');
+  const [nostrPubkey, setNostrPubkey] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
-
-  // Print the full strings without truncation
-  console.log('Full repoName length:', repoName?.length);
-  console.log('Full repoName:', JSON.stringify(repoName));
-  console.log('Full repoPath:', JSON.stringify(repoPath));
 
   const addRecord = async () => {
     if (!recordText.trim()) {
@@ -74,7 +76,7 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
         'utf8'
       );
 
-      // Step 4: Stage the file with MGit Add (NEW)
+      // Step 4: Stage the file with MGit Add
       console.log('Staging file with MGit add...');
       const addResult = await MGitModule.add(repoPath, 'medical-history.json');
       if (!addResult.success) {
@@ -82,13 +84,13 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
       }
       console.log('File staged successfully:', addResult.message);
 
-      // Step 5: Create MCommit with Nostr signature (UPDATED)
+      // Step 5: Create MCommit with Nostr signature
       console.log('Creating MCommit with Nostr signature...');
       const commitResult = await MGitModule.commit(
         repoPath,
-        'added_medical_record', // Standardized commit message
-        'Patient', // author name - could be made configurable
-        'patient@example.com', // author email - could be made configurable  
+        'added_medical_record',
+        'Patient',
+        'patient@example.com',  
         nostrPubkey
       );
 
@@ -115,156 +117,110 @@ export default function AddRecordScreen({ route }: AddRecordScreenProps) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0} // Adjust based on your header height
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView style={styles.container}>
-          <Text style={styles.title}>Add Medical Record</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>{repoName}</Text>
+        <Text style={styles.subtitle}>Medical Records</Text>
+        
+        <View style={styles.addRecordSection}>
+          <Text style={styles.sectionTitle}>Add New Record</Text>
           
-          <View style={styles.section}>
-            <Text style={styles.info}>Repository: {repoPath}</Text>
-            <Text style={styles.info}>Will append to: medical-history.json</Text>
-          </View>
+          <Text style={styles.label}>Medical Record Content</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Enter your medical record details..."
+            value={recordText}
+            onChangeText={setRecordText}
+            multiline
+            numberOfLines={6}
+            textAlignVertical="top"
+          />
+
+          <Text style={styles.label}>Nostr Public Key</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Enter your Nostr public key..."
+            value={nostrPubkey}
+            onChangeText={setNostrPubkey}
+            autoCapitalize="none"
+          />
 
           <TouchableOpacity
-            style={[styles.addButton, isCommitting && styles.buttonDisabled]}
-            onPress={() => {
-              // Just show the form - in a real app you might want a modal or navigation
-            }}
+            style={[styles.addButton, isCommitting && styles.addButtonDisabled]}
+            onPress={addRecord}
             disabled={isCommitting}
           >
-            <Text style={styles.addButtonText}>📝 Add Record</Text>
+            <Text style={styles.addButtonText}>
+              {isCommitting ? 'Adding Record...' : 'Add Medical Record'}
+            </Text>
           </TouchableOpacity>
-
-          <View style={styles.form}>
-            <Text style={styles.label}>Medical Record Content:</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={recordText}
-              onChangeText={setRecordText}
-              placeholder="Enter your medical record content (e.g., 'Hello World - feeling great today!')"
-              multiline={true}
-              numberOfLines={8}
-              textAlignVertical="top"
-            />
-
-            <Text style={styles.label}>Your Nostr Public Key:</Text>
-            <TextInput
-              style={styles.input}
-              value={nostrPubkey}
-              onChangeText={setNostrPubkey}
-              placeholder="npub... or hex format"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <TouchableOpacity
-              style={[styles.saveButton, isCommitting && styles.buttonDisabled]}
-              onPress={addRecord}
-              disabled={isCommitting || !recordText.trim() || !nostrPubkey.trim()}
-            >
-              <Text style={styles.saveButtonText}>
-                {isCommitting ? '⏳ Committing...' : '💾 Save & Commit'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.subtitle}>What This Does</Text>
-            <Text style={styles.info}>✓ Reads existing medical-history.json</Text>
-            <Text style={styles.info}>✓ Appends your new record to the JSON array</Text>
-            <Text style={styles.info}>✓ Writes updated file back to repository</Text>
-            <Text style={styles.info}>✓ Creates MGit commit with Nostr pubkey</Text>
-          </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  content: {
+    flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    marginBottom: 5,
     color: '#333',
-  },
-  section: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
   },
   subtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  info: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 30,
   },
-  addButton: {
-    backgroundColor: '#007AFF',
+  addRecordSection: {
+    backgroundColor: '#f8f9fa',
     padding: 20,
     borderRadius: 12,
-    marginVertical: 16,
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
-  addButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  form: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#333',
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 8,
-    marginTop: 12,
     color: '#333',
   },
-  input: {
+  textInput: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
+    marginBottom: 20,
   },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  saveButton: {
-    backgroundColor: '#34C759',
-    padding: 16,
+  addButton: {
+    backgroundColor: '#007AFF',
     borderRadius: 8,
-    marginTop: 20,
+    paddingVertical: 15,
     alignItems: 'center',
+    marginTop: 10,
   },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
+  addButtonDisabled: {
     backgroundColor: '#ccc',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
