@@ -1,161 +1,58 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   SafeAreaView, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert, 
-  ScrollView 
+  TouchableOpacity
 } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
-import { NativeModules } from 'react-native';
-import RNFS from 'react-native-fs';
-
-const MGitModule = NativeModules.MGitModule;
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 interface ActiveBinderScreenProps {
   route: RouteProp<RootStackParamList, 'ActiveBinder'>;
 }
 
+type ActiveBinderNavigationProp = StackNavigationProp<RootStackParamList, 'ActiveBinder'>;
+
 export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route }) => {
   const { repoPath, repoName } = route.params;
-  const [recordText, setRecordText] = useState('');
-  const [nostrPubkey, setNostrPubkey] = useState('');
-  const [isCommitting, setIsCommitting] = useState(false);
+  const navigation = useNavigation<ActiveBinderNavigationProp>();
 
-  const addRecord = async () => {
-    if (!recordText.trim()) {
-      Alert.alert('Error', 'Please enter some text for your medical record');
-      return;
-    }
-
-    if (!nostrPubkey.trim()) {
-      Alert.alert('Error', 'Please enter your Nostr public key');
-      return;
-    }
-
-    setIsCommitting(true);
-
-    try {
-      // Step 1: Read existing medical-history.json
-      const medicalHistoryPath = `${repoPath}/medical-history.json`;
-      let existingData = [];
-      
-      try {
-        const fileContent = await RNFS.readFile(medicalHistoryPath, 'utf8');
-        existingData = JSON.parse(fileContent);
-        
-        // Ensure it's an array
-        if (!Array.isArray(existingData)) {
-          existingData = [];
-        }
-      } catch (error) {
-        console.log('No existing medical-history.json or invalid JSON, starting fresh');
-        existingData = [];
-      }
-
-      // Step 2: Append new record
-      const newRecord = {
-        id: `record-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        content: recordText,
-        author: {
-          nostrPubkey: nostrPubkey
-        }
-      };
-
-      existingData.push(newRecord);
-
-      // Step 3: Write updated JSON back to file
-      await RNFS.writeFile(
-        medicalHistoryPath, 
-        JSON.stringify(existingData, null, 2), 
-        'utf8'
-      );
-
-      // Step 4: Stage the file with MGit Add
-      console.log('Staging file with MGit add...');
-      const addResult = await MGitModule.add(repoPath, 'medical-history.json');
-      if (!addResult.success) {
-        throw new Error(addResult.error || 'Failed to stage file');
-      }
-      console.log('File staged successfully:', addResult.message);
-
-      // Step 5: Create MCommit with Nostr signature
-      console.log('Creating MCommit with Nostr signature...');
-      const commitResult = await MGitModule.commit(
-        repoPath,
-        'added_medical_record',
-        'Patient',
-        'patient@example.com',  
-        nostrPubkey
-      );
-
-      if (commitResult.success) {
-        console.log('MCommit success:', commitResult);
-        Alert.alert(
-          'Success! 🎉',
-          `Medical record added and committed!\n\nGit Hash: ${commitResult.gitHash?.substring(0, 8)}\nMGit Hash: ${commitResult.mGitHash?.substring(0, 8)}\nNostr Signed: ✓`,
-          [{ text: 'OK', onPress: () => {
-            setRecordText('');
-            setNostrPubkey('');
-          }}]
-        );
-      } else {
-        throw new Error(commitResult.message || 'Commit failed');
-      }
-
-    } catch (error) {
-      console.error('Add record error:', error);
-      Alert.alert('Error', `Failed to add record: ${error.message}`);
-    } finally {
-      setIsCommitting(false);
-    }
+  const handleAddRecord = () => {
+    navigation.navigate('AddRecord', { 
+      repoPath,
+      repoName
+    });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
-        <Text style={styles.title}>{repoName}</Text>
-        <Text style={styles.subtitle}>Medical Records</Text>
-        
-        <View style={styles.addRecordSection}>
-          <Text style={styles.sectionTitle}>Add New Record</Text>
-          
-          <Text style={styles.label}>Medical Record Content</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your medical record details..."
-            value={recordText}
-            onChangeText={setRecordText}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
-
-          <Text style={styles.label}>Nostr Public Key</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your Nostr public key..."
-            value={nostrPubkey}
-            onChangeText={setNostrPubkey}
-            autoCapitalize="none"
-          />
-
-          <TouchableOpacity
-            style={[styles.addButton, isCommitting && styles.addButtonDisabled]}
-            onPress={addRecord}
-            disabled={isCommitting}
-          >
-            <Text style={styles.addButtonText}>
-              {isCommitting ? 'Adding Record...' : 'Add Medical Record'}
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.content}>
+        {/* Main Viewing Area - Binder Cover */}
+        <View style={styles.binderCover}>
+          <View style={styles.binderSpine}>
+            <View style={styles.binderRings}>
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+            </View>
+          </View>
+          <View style={styles.binderFront}>
+            <Text style={styles.binderTitle}>{repoName}</Text>
+            <Text style={styles.binderSubtitle}>Medical Records</Text>
+          </View>
         </View>
-      </ScrollView>
+
+        {/* Add Record Button */}
+        <TouchableOpacity
+          style={styles.addRecordButton}
+          onPress={handleAddRecord}
+        >
+          <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -163,64 +60,78 @@ export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route })
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f5f5f5',
   },
   content: {
     flex: 1,
     padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
+  binderCover: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    marginBottom: 60,
+  },
+  binderSpine: {
+    width: 40,
+    backgroundColor: '#2c3e50',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  binderRings: {
+    gap: 15,
+  },
+  ring: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#34495e',
+    borderWidth: 2,
+    borderColor: '#7f8c8d',
+  },
+  binderFront: {
+    flex: 1,
+    padding: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    minHeight: 300,
+    minWidth: 220,
+  },
+  binderTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
-  },
-  addRecordSection: {
-    backgroundColor: '#f8f9fa',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: '#333',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#2c3e50',
+    textAlign: 'center',
     marginBottom: 8,
-    color: '#333',
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+  binderSubtitle: {
     fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 20,
+    color: '#7f8c8d',
+    textAlign: 'center',
   },
-  addButton: {
+  addRecordButton: {
     backgroundColor: '#007AFF',
-    borderRadius: 8,
     paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 10,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    alignSelf: 'center',
   },
-  addButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  addButtonText: {
+  addRecordButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
 });

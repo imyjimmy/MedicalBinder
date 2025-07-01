@@ -8,7 +8,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { ProfileIcon } from './src/components/ProfileIcon';
 import { NostrLoginScreen } from './src/screens/NostrLoginScreen';
 import { NostrAuthService } from './src/services/NostrAuthService';
-import AddRecordScreen from './src/components/AddRecordScreen';
+import { AddRecordScreen } from './src/screens/AddRecordScreen';
 import { ActiveBinderScreen } from './src/screens/ActiveBinderScreen';
 import { KeychainService } from './src/services/KeychainService';
 
