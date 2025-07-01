@@ -14,6 +14,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 import { SharedElement } from 'react-native-shared-element';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -25,11 +26,62 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [clonedRepos, setClonedRepos] = useState<Array<ClonedRepo>>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token?: string) => {
-    setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date(), token: token }]);
+  useEffect(() => {
+    loadClonedRepos();
+  }, []);
+
+  const loadClonedRepos = async () => {
+    try {
+      const storedRepos = await AsyncStorage.getItem('clonedRepos');
+      if (storedRepos) {
+        const parsedRepos = JSON.parse(storedRepos);
+        // Convert clonedAt strings back to Date objects
+        const reposWithDates = parsedRepos.map((repo: any) => ({
+          ...repo,
+          clonedAt: new Date(repo.clonedAt)
+        }));
+        setClonedRepos(reposWithDates);
+      }
+    } catch (error) {
+      console.error('Failed to load cloned repos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveClonedRepos = async (repos: Array<ClonedRepo>) => {
+    try {
+      await AsyncStorage.setItem('clonedRepos', JSON.stringify(repos));
+    } catch (error) {
+      console.error('Failed to save cloned repos:', error);
+    }
+  };
+
+  // const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token?: string) => {
+  //   setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date(), token: token }]);
+  //   setShowQRScanner(false);
+  // };
+
+  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string) => {
+    const newRepo = { name: name, url: repoUrl, path: localPath, clonedAt: new Date() };
+    const updatedRepos = [...clonedRepos, newRepo];
+    setClonedRepos(updatedRepos);
+    await saveClonedRepos(updatedRepos);
     setShowQRScanner(false);
   };
+
+  // Show loading state while repos are being loaded
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text>Loading medical binders...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const handleScanError = (error: string) => {
     console.error('QR Scan Error:', error);
@@ -66,9 +118,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     // navigation.navigate('CreateBinder');
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text>Loading medical binders...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      
       {/* Main Content Area */}
       <View style={styles.content}>
         {clonedRepos.map((repo, index) => (

@@ -144,8 +144,8 @@ function App(): React.JSX.Element {
               headerShadowVisible: false,
               headerLeft: () => headerProfileIcon,
               headerTitleStyle: {
-                fontSize: 16,        // Smaller font size
-                fontWeight: '500',   // Adjust weight if needed
+                fontSize: 14,        // Smaller font size
+                fontWeight: '400',   // Adjust weight if needed
               },
             })}
           />

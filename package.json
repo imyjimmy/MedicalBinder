@@ -5,7 +5,7 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
-    "ios:simulator": "CONFIGURATION=Debug react-native run-ios --simulator=\"iPhone 15 Pro\"",
+    "ios:sim": "CONFIGURATION=Debug react-native run-ios --simulator=\"iPhone 15 Pro\"",
     "dev": "react-native start --reset-cache",
     "build:ios": "expo run:ios",
     "start": "react-native start",
@@ -16,11 +16,12 @@
     "clean:ios": "cd ios && rm -rf build/ && rm -rf Pods/ && rm -f Podfile.lock && cd ..",
     "clean:modules": "rm -rf node_modules/ && yarn install",
     "clean:rebuild": "yarn clean && cd ios && pod install && cd .. && yarn ios",
-    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:simulator",
+    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:sim",
     "postinstall": "npx patch-package"
   },
   "dependencies": {
     "@noble/secp256k1": "^2.0.0",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/stack": "^6.3.20",
     "bech32": "^2.0.0",
