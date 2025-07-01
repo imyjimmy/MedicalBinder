@@ -16,11 +16,11 @@ import RNFS from 'react-native-fs';
 
 const MGitModule = NativeModules.MGitModule;
 
-interface OpenedBinderScreenProps {
-  route: RouteProp<RootStackParamList, 'OpenedBinder'>;
+interface ActiveBinderScreenProps {
+  route: RouteProp<RootStackParamList, 'ActiveBinder'>;
 }
 
-export const OpenedBinderScreen: React.FC<OpenedBinderScreenProps> = ({ route }) => {
+export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route }) => {
   const { repoPath, repoName } = route.params;
   const [recordText, setRecordText] = useState('');
   const [nostrPubkey, setNostrPubkey] = useState('');

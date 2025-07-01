@@ -9,7 +9,7 @@ import { ProfileIcon } from './src/components/ProfileIcon';
 import { NostrLoginScreen } from './src/screens/NostrLoginScreen';
 import { NostrAuthService } from './src/services/NostrAuthService';
 import AddRecordScreen from './src/components/AddRecordScreen';
-import { OpenedBinderScreen } from './src/screens/OpenedBinderScreen';
+import { ActiveBinderScreen } from './src/screens/ActiveBinderScreen';
 import { KeychainService } from './src/services/KeychainService';
 
 // import { binderExpandTransition, binderTransitionSpec } from './src/animations/binderTransition';
@@ -21,7 +21,7 @@ export type RootStackParamList = {
     repoPath: string;
     repoName: string;
   };
-  OpenedBinder: {  // Add this
+  ActiveBinder: {  // Add this
     repoPath: string;
     repoName: string;
     sharedElementId: string;
@@ -121,8 +121,8 @@ function App(): React.JSX.Element {
             options={{ title: 'Add Medical Record' }}
           />
           <Stack.Screen 
-            name="OpenedBinder" 
-            component={OpenedBinderScreen}
+            name="ActiveBinder" 
+            component={ActiveBinderScreen}
             sharedElements={(route, otherRoute, showing) => {
               console.log('=== SHARED ELEMENT DEBUG ===');
               console.log('route:', route?.name, route?.params);
