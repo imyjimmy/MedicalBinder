@@ -37,6 +37,17 @@ export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route })
               <View style={styles.ring} />
               <View style={styles.ring} />
               <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
+              <View style={styles.ring} />
             </View>
           </View>
           <View style={styles.binderFront}>
@@ -64,50 +75,57 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    padding: 16,
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    // borderRadius: 12,
+    // borderWidth: 1,
+    // borderColor: '#757575',
+    // borderStyle: 'solid',
   },
   binderCover: {
+    flexGrow: 1,
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#757575',
+    borderStyle: 'solid',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
-    marginBottom: 60,
+    marginBottom: 20,
   },
   binderSpine: {
     width: 40,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#6b7280', // Changed from dark to grayish
     borderTopLeftRadius: 12,
     borderBottomLeftRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 30, // Increased padding for more holes
   },
   binderRings: {
-    gap: 15,
+    gap: 20, // Increased gap between holes
   },
   ring: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#34495e',
-    borderWidth: 2,
-    borderColor: '#7f8c8d',
+    width: 12, // Reduced from 20 to 12 (smaller holes)
+    height: 12, // Reduced from 20 to 12 (smaller holes)
+    borderRadius: 6, // Reduced from 10 to 6
+    backgroundColor: '#9ca3af', // Lighter gray for holes
+    borderWidth: 1, // Reduced border width
+    borderColor: '#d1d5db', // Lighter border color
   },
   binderFront: {
     flex: 1,
-    padding: 40,
+    padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
-    minHeight: 300,
     minWidth: 220,
   },
   binderTitle: {
