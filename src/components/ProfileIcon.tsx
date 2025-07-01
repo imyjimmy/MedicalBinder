@@ -28,21 +28,42 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
 
   // useEffect(() => {
   //   if (pubkey) {
+  //     // Check cache first before setting loading state
+  //     const fetchProfile = async () => {
+  //       const cachedProfile = await ProfileService.getProfile(pubkey);
+  //       if (cachedProfile !== profile) {
+  //         setProfile(cachedProfile);
+  //       }
+  //     };
+      
   //     fetchProfile();
   //   }
   // }, [pubkey]);
 
   useEffect(() => {
     if (pubkey) {
-      // Check cache first before setting loading state
+      // Reset profile state when pubkey changes
+      setProfile(null);
+      
       const fetchProfile = async () => {
-        const cachedProfile = await ProfileService.getProfile(pubkey);
-        if (cachedProfile !== profile) {
-          setProfile(cachedProfile);
+        setLoading(true);
+        try {
+          const userProfile = await ProfileService.getProfile(pubkey);
+          console.log('userProfile: ', userProfile);
+          setProfile(userProfile);
+        } catch (error) {
+          console.error('Failed to fetch profile:', error);
+          setProfile(null);
+        } finally {
+          setLoading(false);
         }
       };
       
       fetchProfile();
+    } else {
+      // Clear profile when logged out
+      setProfile(null);
+      setLoading(false);
     }
   }, [pubkey]);
 

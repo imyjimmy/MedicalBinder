@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { KeychainService } from '../services/KeychainService';
 import { NostrAuthService } from '../services/NostrAuthService';
+import { ProfileService } from '../services/ProfileService';
 
 interface NostrKeyManagerProps {
   onLogout?: () => void;
@@ -83,8 +84,11 @@ export const NostrKeyManager: React.FC<NostrKeyManagerProps> = ({ onLogout }) =>
           style: 'destructive',
           onPress: async () => {
             const success = await NostrAuthService.logout();
-            if (success && onLogout) {
-              onLogout();
+            if (success) {
+              ProfileService.clearCache();
+              if (onLogout) {
+                onLogout();
+              }
             } else if (!success) {
               Alert.alert('Error', 'Failed to logout');
             }

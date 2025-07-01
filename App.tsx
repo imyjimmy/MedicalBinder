@@ -35,6 +35,11 @@ function App(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserPubkey, setCurrentUserPubkey] = useState<string | null>(null);
 
+  const handleLogout = () => {
+    console.log('handleLogout fn in App.tsx');
+    setIsAuthenticated(false);
+  };
+
   const headerProfileIcon = useMemo(() => (
     <View style={{ marginLeft: 20 }}>
       <ProfileIcon 
@@ -42,7 +47,7 @@ function App(): React.JSX.Element {
         onPress={handleLogout}
       />
     </View>
-  ), [currentUserPubkey]);
+  ), [currentUserPubkey, handleLogout]);
 
   useEffect(() => {
     checkAuthenticationStatus();
@@ -73,10 +78,6 @@ function App(): React.JSX.Element {
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
   };
 
   if (isLoading) {
@@ -142,6 +143,10 @@ function App(): React.JSX.Element {
               title: route.params.repoName,
               headerShadowVisible: false,
               headerLeft: () => headerProfileIcon,
+              headerTitleStyle: {
+                fontSize: 16,        // Smaller font size
+                fontWeight: '500',   // Adjust weight if needed
+              },
             })}
           />
         </Stack.Navigator>
