@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -14,6 +14,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
+import { NostrAuthService } from '../services/NostrAuthService';
 
 const MGitModule = NativeModules.MGitModule;
 
@@ -31,6 +32,16 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [pdfs, setPdfs] = useState<string[]>([]);
   const [isCommitting, setIsCommitting] = useState(false);
+
+  useEffect(() => {
+    const loadUserPubkey = async () => {
+      const userPubkey = await NostrAuthService.getCurrentUserPubkey();
+      if (userPubkey) {
+        setNostrPubkey(userPubkey);
+      }
+    };
+    loadUserPubkey();
+  }, []);
 
   const addRecord = async () => {
     if (!recordText.trim() && photos.length === 0 && pdfs.length === 0) {
@@ -258,12 +269,12 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <Text style={styles.title}>Create Medical Record</Text>
           <Text style={styles.subtitle}>
             Add your medical information using any of the methods below
           </Text>
-        </View>
+        </View> */}
 
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
@@ -315,11 +326,13 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
           <View style={styles.cardContent}>
             <Text style={styles.label}>Nostr Public Key</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter your Nostr public key..."
+              style={[styles.input, styles.nostrInput]}
               value={nostrPubkey}
               onChangeText={setNostrPubkey}
+              placeholder="npub... or hex format"
               autoCapitalize="none"
+              autoCorrect={false}
+              editable={false}  // Add this line
             />
           </View>
         </View>
@@ -459,6 +472,9 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#ffffff',
+  },
+  nostrInput: {
+    color: '#e1e1e1',
   },
   characterCount: {
     fontSize: 12,

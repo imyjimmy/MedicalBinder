@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     minWidth: 32,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   deleteButtonText: {
