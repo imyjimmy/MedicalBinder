@@ -43,17 +43,24 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
     loadUserPubkey();
   }, []);
 
+  /**
+   * Adds a new medical record to the repository and commits it with Nostr signature
+   * Validates input, updates medical-history.json, stages changes, and creates an MGit commit
+  */
   const addRecord = async () => {
+    // Validate that user has provided some content (text, photos, or PDFs)
     if (!recordText.trim() && photos.length === 0 && pdfs.length === 0) {
       Alert.alert('Error', 'Please add some content to your medical record');
       return;
     }
 
+    // Ensure Nostr public key is present for commit signing
     if (!nostrPubkey.trim()) {
       Alert.alert('Error', 'Please enter your Nostr public key');
       return;
     }
 
+    // Show loading state during the commit process
     setIsCommitting(true);
 
     try {
@@ -62,39 +69,43 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
       let existingData = [];
       
       try {
+        // Attempt to read and parse existing medical history file
         const fileContent = await RNFS.readFile(medicalHistoryPath, 'utf8');
         existingData = JSON.parse(fileContent);
         
+        // Ensure data is in expected array format
         if (!Array.isArray(existingData)) {
           existingData = [];
         }
       } catch (error) {
+        // File doesn't exist or is corrupted - start with empty array
         console.log('No existing medical-history.json or invalid JSON, starting fresh');
         existingData = [];
       }
 
-      // Step 2: Append new record
+      // Step 2: Create new medical record entry with metadata
       const newRecord = {
-        id: `record-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        content: recordText,
-        photos: photos,
-        pdfs: pdfs,
+        id: `record-${Date.now()}`, // Unique timestamp-based ID
+        timestamp: new Date().toISOString(), // ISO timestamp for sorting/filtering
+        content: recordText, // User's text content
+        photos: photos, // Array of photo attachments
+        pdfs: pdfs, // Array of PDF attachments
         author: {
-          nostrPubkey: nostrPubkey
+          nostrPubkey: nostrPubkey // Nostr identity for verification
         }
       };
 
+      // Add new record to existing data array
       existingData.push(newRecord);
 
-      // Step 3: Write updated JSON back to file
+      // Step 3: Write updated medical history back to repository
       await RNFS.writeFile(
         medicalHistoryPath, 
         JSON.stringify(existingData, null, 2), 
         'utf8'
       );
 
-      // Step 4: Stage the file with MGit Add
+      // Step 4: Stage the modified file for commit using MGit
       console.log('Staging file with MGit add...');
       const addResult = await MGitModule.add(repoPath, 'medical-history.json');
       if (!addResult.success) {
@@ -102,22 +113,24 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
       }
       console.log('File staged successfully:', addResult.message);
 
-      // Step 5: Create MCommit with Nostr signature
+      // Step 5: Create MGit commit with Nostr signature for authenticity
       console.log('Creating MCommit with Nostr signature...');
       const commitResult = await MGitModule.commit(
         repoPath,
-        'added_medical_record',
-        'Patient',
-        'patient@example.com',  
-        nostrPubkey
+        'add_medical_record', // Commit message
+        'Patient', // Author name (could be made configurable)
+        'patient@example.com', // Author email (could be made configurable)
+        nostrPubkey // Nostr pubkey for cryptographic signing
       );
 
       if (commitResult.success) {
+        // Display success message with commit hashes for verification
         console.log('MCommit success:', commitResult);
         Alert.alert(
           'Success! 🎉',
           `Medical record added and committed!\n\nGit Hash: ${commitResult.gitHash?.substring(0, 8)}\nMGit Hash: ${commitResult.mGitHash?.substring(0, 8)}\nNostr Signed: ✓`,
           [{ text: 'OK', onPress: () => {
+            // Reset form after successful commit
             setRecordText('');
             setPhotos([]);
             setPdfs([]);
@@ -128,9 +141,11 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
       }
 
     } catch (error) {
+      // Handle any errors during the record addition process
       console.error('Add record error:', error);
       Alert.alert('Error', `Failed to add record: ${error.message}`);
     } finally {
+      // Always reset loading state regardless of success/failure
       setIsCommitting(false);
     }
   };
