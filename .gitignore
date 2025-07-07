@@ -76,3 +76,6 @@ yarn-error.log
 
 *.lock
 .expo
+
+.env
+.env.local
