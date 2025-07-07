@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { NostrKeyManager } from './NostrKeyManager';
+import { BillingManager } from './BillingManager';
 import { NostrProfile } from '../types/nostr';
 import { ProfileService } from '../services/ProfileService';
 
@@ -25,20 +26,7 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
   );
   const [loading, setLoading] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
-
-  // useEffect(() => {
-  //   if (pubkey) {
-  //     // Check cache first before setting loading state
-  //     const fetchProfile = async () => {
-  //       const cachedProfile = await ProfileService.getProfile(pubkey);
-  //       if (cachedProfile !== profile) {
-  //         setProfile(cachedProfile);
-  //       }
-  //     };
-      
-  //     fetchProfile();
-  //   }
-  // }, [pubkey]);
+  const [showBilling, setShowBilling] = useState(false);
 
   useEffect(() => {
     if (pubkey) {
@@ -67,20 +55,6 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
     }
   }, [pubkey]);
 
-  const fetchProfile = async () => {
-    if (!pubkey) return;
-    
-    setLoading(true);
-    try {
-      const userProfile = await ProfileService.getProfile(pubkey);
-      setProfile(userProfile);
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePress = () => {
     Alert.alert(
       'Profile Options',
@@ -90,6 +64,10 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
         { 
           text: 'Manage Keys', 
           onPress: () => setShowKeyManager(true)
+        },
+        { 
+          text: 'Billing', 
+          onPress: () => setShowBilling(true)
         },
         { text: 'Logout', style: 'destructive', onPress: onPress },
       ]
@@ -151,7 +129,7 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
         {renderProfileImage()}
         <View style={styles.statusDot} />
       </TouchableOpacity>
-
+      { /* Key Manager Modal */}
       <Modal
         visible={showKeyManager}
         animationType="slide"
@@ -168,6 +146,27 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
           </View>
           <ScrollView>
             <NostrKeyManager onLogout={handleLogoutFromKeyManager} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+      {/* Billing Modal */}
+      <Modal
+        visible={showBilling}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>⚡ Billing & Payments</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowBilling(false)}
+            >
+              <Text style={styles.closeButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView>
+            <BillingManager />
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -228,6 +227,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#34C759',
     borderWidth: 2,
     borderColor: 'white',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    flex: 1,
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,

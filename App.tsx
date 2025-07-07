@@ -1,4 +1,7 @@
 import './src/polyfills'; // Import polyfills first
+import 'text-encoding-polyfill';
+import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
 import React, { useState, useEffect, useMemo } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
