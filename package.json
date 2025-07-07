@@ -13,10 +13,11 @@
     "lint": "eslint .",
     "clean": "yarn clean:metro && yarn clean:ios && yarn clean:modules",
     "clean:metro": "npx react-native start --reset-cache || true",
+    "clean:metro-cache-only": "rm -rf $TMPDIR/metro-* && rm -rf $TMPDIR/react-* && rm -rf node_modules/.cache",
     "clean:ios": "cd ios && rm -rf build/ && rm -rf Pods/ && rm -f Podfile.lock && cd ..",
     "clean:modules": "rm -rf node_modules/ && yarn install",
     "clean:rebuild": "yarn clean && cd ios && pod install && cd .. && yarn ios",
-    "clean:full": "yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:sim",
+    "clean:full": "yarn clean:metro-cache-only && yarn clean:modules && yarn clean:ios && cd ios && pod install && cd .. && yarn ios:sim",
     "postinstall": "npx patch-package"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "expo-cli": "^6.3.10",
     "react": "19.0.0",
     "react-native": "0.79.3",
+    "react-native-dotenv": "^3.4.11",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.26.0",
     "react-native-get-random-values": "^1.11.0",

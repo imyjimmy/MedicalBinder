@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { InvoicePayment } from './InvoicePayment';
 import LightningService from '../services/LightningService';
+import NostrDMService from '../services/NostrDMService';
 
 interface PendingBill {
   id: string;
@@ -38,17 +39,17 @@ export const BillingManager: React.FC = () => {
   const loadPendingBills = async () => {
     // TODO: Parse actual invoices from Nostr DMs
     // For now, mock data for testing
-    const mockBills: PendingBill[] = [
-      {
-        id: '1',
-        amount: 5000,
-        description: 'Medical repository hosting - July 2025',
-        payment_request: 'lnbc50u1...', // Replace with real invoice
-        receivedAt: new Date(),
-        paid: false
-      }
-    ];
-    setPendingBills(mockBills);
+    // const mockBills: PendingBill[] = [
+    //   {
+    //     id: '1',
+    //     amount: 5000,
+    //     description: 'Medical repository hosting - July 2025',
+    //     payment_request: 'lnbc50u1...', // Replace with real invoice
+    //     receivedAt: new Date(),
+    //     paid: false
+    //   }
+    // ];
+    // setPendingBills(mockBills);
   };
 
   const handlePaymentComplete = (bill: PendingBill, result: any) => {
