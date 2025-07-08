@@ -23,10 +23,12 @@ export type RootStackParamList = {
   AddRecord: {
     repoPath: string;
     repoName: string;
+    token: string;
   };
   ActiveBinder: {  // Add this
     repoPath: string;
     repoName: string;
+    token: string;
     sharedElementId: string;
   };
 };

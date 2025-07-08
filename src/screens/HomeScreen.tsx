@@ -79,8 +79,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     await saveClonedRepos(updatedRepos);
   };
 
-  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string) => {
-    const newRepo = { name: name, url: repoUrl, path: localPath, clonedAt: new Date() };
+  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string, token?: string) => {
+    const newRepo = { name: name, url: repoUrl, path: localPath, clonedAt: new Date(), token: token };
     const updatedRepos = [...clonedRepos, newRepo];
     setClonedRepos(updatedRepos);
     await saveClonedRepos(updatedRepos);
@@ -110,7 +110,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
     navigation.navigate('AddRecord', { 
       repoPath: repo.path,
-      repoName: repo.name
+      repoName: repo.name,
+      token: repo.token ?? ''
     });
   };
 
@@ -121,6 +122,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     navigation.navigate('ActiveBinder', { 
       repoPath: repo.path,
       repoName: repo.name,
+      token: repo.token ?? '',
       sharedElementId: `binder-${index}`,
     });
   };

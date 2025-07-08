@@ -17,13 +17,14 @@ interface ActiveBinderScreenProps {
 type ActiveBinderNavigationProp = StackNavigationProp<RootStackParamList, 'ActiveBinder'>;
 
 export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route }) => {
-  const { repoPath, repoName } = route.params;
+  const { repoPath, repoName, token } = route.params;
   const navigation = useNavigation<ActiveBinderNavigationProp>();
 
   const handleAddRecord = () => {
     navigation.navigate('AddRecord', { 
       repoPath,
-      repoName
+      repoName,
+      token,
     });
   };
 

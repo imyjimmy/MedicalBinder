@@ -25,7 +25,7 @@ interface AddRecordScreenProps {
 type TabType = 'text' | 'photos' | 'pdfs';
 
 export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
-  const { repoPath, repoName } = route.params;
+  const { repoPath, repoName, token } = route.params;
   const [activeTab, setActiveTab] = useState<TabType>('text');
   const [recordText, setRecordText] = useState('');
   const [nostrPubkey, setNostrPubkey] = useState('');
@@ -126,6 +126,18 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
       if (commitResult.success) {
         // Display success message with commit hashes for verification
         console.log('MCommit success:', commitResult);
+        // Step 6: Push changes to remote repository
+        console.log('Pushing changes to remote repository...');
+        const pushResult = await MGitModule.push(
+          repoPath,
+          token,
+        );
+
+        if (!pushResult.success) {
+          console.warn('Local commit succeeded but push failed:', pushResult.error);
+          console.error('Push error details:', pushResult, 'token: ', token);
+          // You might want to show a warning to the user about sync status
+        }
         Alert.alert(
           'Success! 🎉',
           `Medical record added and committed!\n\nGit Hash: ${commitResult.gitHash?.substring(0, 8)}\nMGit Hash: ${commitResult.mGitHash?.substring(0, 8)}\nNostr Signed: ✓`,
