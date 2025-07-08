@@ -32,6 +32,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     loadClonedRepos();
   }, []);
 
+  const handleTelehealthPress = () => {
+    navigation.navigate('VideoConference');
+  };
+
   const loadClonedRepos = async () => {
     try {
       const storedRepos = await AsyncStorage.getItem('clonedRepos');
@@ -91,7 +95,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+        <View style={[styles.binderContainer, { justifyContent: 'center', alignItems: 'center' }]}>
           <Text>Loading medical binders...</Text>
         </View>
       </SafeAreaView>
@@ -148,7 +152,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Main Content Area */}
-      <View style={styles.content}>
+      {/* Telehealth Appointment Rectangle */}
+      <View style={styles.telehealthContainer}>
+        <TouchableOpacity
+          style={styles.telehealthRectangle}
+          onPress={handleTelehealthPress}
+          activeOpacity={0.8}
+        >
+          <View style={styles.telehealthContent}>
+            <View style={styles.telehealthIcon}>
+              <Text style={styles.telehealthIconText}>🏥</Text>
+            </View>
+            <View style={styles.telehealthInfo}>
+              <Text style={styles.telehealthTitle}>Upcoming Appointment</Text>
+              <Text style={styles.telehealthSubtitle}>Dr. Smith - Cardiology</Text>
+              <Text style={styles.telehealthTime}>Today, 2:30 PM</Text>
+            </View>
+            <View style={styles.telehealthJoinButton}>
+              <Text style={styles.telehealthJoinText}>Join Call</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.binderContainer}>
         {clonedRepos.map((repo, index) => (
           <SharedElement
             style={styles.repoItem}
@@ -158,37 +184,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               console.log('🏠 HomeScreen SharedElement registered:', `binder-${index}`, !!node);
             }}>
             {/* <View key={index}> */}
-              <View style={styles.repoInfo}>
-                <Text style={styles.repoName}>{repo.name}</Text>
-                <Text style={styles.repoPath}>{repo.path}</Text>
-              </View>
-              <View style={styles.binderOpenContainer}>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => deleteRepo(index)}
-                >
-                  <Text style={styles.deleteButtonText}>🗑️</Text>
-                </TouchableOpacity>
-                {/* Circular Open Button */}
-                <TouchableOpacity 
-                  style={styles.openButton}
-                  onPress={() => navigateToActiveBinder(repo, index)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.openButtonText}>Open 📖</Text>
-                </TouchableOpacity>
-              </View>
-            {/* </View> */}
+            <View style={styles.repoInfo}>
+              <Text style={styles.repoName}>{repo.name}</Text>
+              <Text style={styles.repoPath}>{repo.path}</Text>
+            </View>
+            <View style={styles.binderInteractiveButtonContainer}>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => deleteRepo(index)}
+              >
+                <Text style={styles.deleteButtonText}>🗑️</Text>
+              </TouchableOpacity>
+              {/* Circular Open Button */}
+              <TouchableOpacity 
+                style={styles.openButton}
+                onPress={() => navigateToActiveBinder(repo, index)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.openButtonText}>Open 📖</Text>
+              </TouchableOpacity>
+            </View>
           </SharedElement>
         ))}
         {/* Centered Add Button in Lower Third */}
-        {/* <TouchableOpacity
-          style={[styles.scanButton, { backgroundColor: '#FF3B30' }]}
-          onPress={clearAllRepos}
-        >
-          <Text style={styles.scanButtonText}>Clear All Repos</Text>
-        </TouchableOpacity> */}
-        <View style={styles.buttonContainer}>
+        <View style={styles.binderContent}>
           <TouchableOpacity 
             style={styles.addButton}
             onPress={handleAddMedicalBinder}
@@ -214,21 +233,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 };
 
 const styles = StyleSheet.create({
-  binderOpenContainer: {
+  binderInteractiveButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+    justifyContent: 'space-between',
   },
-  content: {
+  binderContainer: {
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 30,
   },
-  buttonContainer: {
+  binderContent: {
     width: '100%',
     marginBottom: '10%',
     marginTop: 18,
@@ -286,8 +306,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   repoInfo: {
-    // flex: 1,
-    // marginRight: 12,
+    marginBottom: 10,
   },
   repoItem: {
     flexDirection: 'column',
@@ -295,7 +314,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: 'white',
     width: '100%',
-    height: '20%',
     padding: 15,
     paddingBottom: 10,
     borderRadius: 12,
@@ -330,6 +348,70 @@ const styles = StyleSheet.create({
   scanButtonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  telehealthContainer: {
+    marginBottom: 20,
+    marginTop: 20,
+    // width: '100%',
+    paddingHorizontal: 30,
+  },
+  telehealthRectangle: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#0ea5e9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  telehealthContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  telehealthIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#0ea5e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  telehealthIconText: {
+    fontSize: 24,
+  },
+  telehealthInfo: {
+    flex: 1,
+  },
+  telehealthTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e40af',
+    marginBottom: 4,
+  },
+  telehealthSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  telehealthTime: {
+    fontSize: 14,
+    color: '#16a34a',
+    fontWeight: '600',
+  },
+  telehealthJoinButton: {
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  telehealthJoinText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

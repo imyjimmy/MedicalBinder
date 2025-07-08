@@ -13,6 +13,7 @@ import { NostrLoginScreen } from './src/screens/NostrLoginScreen';
 import { NostrAuthService } from './src/services/NostrAuthService';
 import { AddRecordScreen } from './src/screens/AddRecordScreen';
 import { ActiveBinderScreen } from './src/screens/ActiveBinderScreen';
+import { VideoConferenceScreen } from './src/screens/VideoConferenceScreen';
 import { KeychainService } from './src/services/KeychainService';
 
 // import { binderExpandTransition, binderTransitionSpec } from './src/animations/binderTransition';
@@ -31,6 +32,7 @@ export type RootStackParamList = {
     token: string;
     sharedElementId: string;
   };
+  VideoConference: undefined;
 };
 
 const Stack = createSharedElementStackNavigator<RootStackParamList>();
@@ -153,6 +155,14 @@ function App(): React.JSX.Element {
                 fontWeight: '400',   // Adjust weight if needed
               },
             })}
+          />
+          <Stack.Screen
+            name="VideoConference"
+            component={VideoConferenceScreen}
+            options={{
+              title: 'Video Call',
+              headerShown: false, // Full screen video call
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>
