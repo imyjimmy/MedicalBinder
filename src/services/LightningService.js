@@ -41,6 +41,29 @@ class LightningService {
       throw error;
     }
   }
+
+  async payInvoice(paymentRequest) {
+    if (!this.connected) {
+      await this.connect();
+    }
+
+    try {
+      console.log('💳 Paying invoice:', paymentRequest.substring(0, 20) + '...');
+      
+      const response = await this.provider.sendPayment(paymentRequest);
+      console.log('✅ Payment response:', response);
+      
+      return {
+        success: true,
+        preimage: response.preimage,
+        paymentHash: response.payment_hash,
+        feePaid: response.fee_msat ? Math.floor(response.fee_msat / 1000) : 0
+      };
+    } catch (error) {
+      console.error('❌ Payment failed:', error);
+      throw error;
+    }
+  }
 }
 
 export default new LightningService();

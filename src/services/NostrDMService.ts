@@ -1,4 +1,4 @@
-import { SimplePool, Event, nip04, getPublicKey } from 'nostr-tools';
+import { SimplePool, Event, nip04, nip19, getPublicKey } from 'nostr-tools';
 import { KeychainService } from './KeychainService';
 
 interface DecryptedDM {
@@ -22,6 +22,20 @@ class NostrDMService {
     this.pool = new SimplePool();
   }
 
+  private npubToHex(npub: string): string {
+    try {
+      const { type, data } = nip19.decode(npub);
+      if (type === 'npub') {
+        return data as string;
+      }
+      throw new Error('Not a valid npub');
+    } catch (error) {
+      console.error('Failed to decode npub:', error);
+      throw error;
+    }
+  }
+
+
   async getDirectMessages(userPubkey: string): Promise<DecryptedDM[]> {
     try {
       // Use same pattern as NostrKeyManager
@@ -30,16 +44,21 @@ class NostrDMService {
         throw new Error('No private key available');
       }
 
+      // Convert npub to hex format for the relay filter
+      const hexPubkey = this.npubToHex(userPubkey);
+      console.log('Using hex pubkey for relay:', hexPubkey.substring(0, 16) + '...');
+
       // Subscribe to DMs sent TO this user (kind 4)
       const filter = {
         kinds: [4],
-        '#p': [userPubkey],
+        '#p': [hexPubkey],
         since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
         limit: 100
       };
 
       const events = await this.pool.querySync(this.relays, filter);
-      
+      console.log(`📬 Found ${events.length} DM events`);
+
       // Decrypt and parse DMs
       const decryptedDMs: DecryptedDM[] = [];
       

@@ -22,6 +22,10 @@ export const BillingManager: React.FC = () => {
   useEffect(() => {
     checkWalletConnection();
     loadPendingBills();
+    return () => {
+      // Cleanup when component unmounts
+      NostrDMService.disconnect();
+    };
   }, []);
 
   const checkWalletConnection = async () => {
@@ -37,19 +41,116 @@ export const BillingManager: React.FC = () => {
   };
 
   const loadPendingBills = async () => {
-    // TODO: Parse actual invoices from Nostr DMs
-    // For now, mock data for testing
-    // const mockBills: PendingBill[] = [
-    //   {
-    //     id: '1',
-    //     amount: 5000,
-    //     description: 'Medical repository hosting - July 2025',
-    //     payment_request: 'lnbc50u1...', // Replace with real invoice
-    //     receivedAt: new Date(),
-    //     paid: false
-    //   }
-    // ];
-    // setPendingBills(mockBills);
+    try {
+      console.log('🔍 Loading pending bills from Nostr DMs...');
+      
+      // Get current user's pubkey
+      const userPubkey = await NostrDMService.getCurrentUserPubkey();
+      console.log('User pubkey:', userPubkey.substring(0, 16) + '...');
+      
+      // Fetch DMs
+      const dms = await NostrDMService.getDirectMessages(userPubkey);
+      console.log(`📬 Found ${dms.length} DMs`);
+      
+      // Parse invoices from DMs
+      const invoices = parseInvoicesFromDMs(dms);
+      console.log(`💰 Parsed ${invoices.length} invoices`);
+      
+      setPendingBills(invoices);
+    } catch (error) {
+      console.error('❌ Failed to load pending bills:', error);
+      // Keep empty array if loading fails
+      setPendingBills([]);
+    }
+  };
+
+  const parseInvoicesFromDMs = (dms: any[]): PendingBill[] => {
+    const invoices: PendingBill[] = [];
+    
+    dms.forEach(dm => {
+      try {
+        // Look for Lightning invoice pattern in DM content
+        const invoiceMatch = dm.content.match(/(ln(bc|tb|bcrt)[a-zA-Z0-9]+)/i);
+        if (invoiceMatch) {
+          const payment_request = invoiceMatch[1];
+          
+          // Extract amount from invoice (basic parsing)
+          const amount = extractAmountFromInvoice(payment_request);
+          
+          // Extract description from DM content
+          const description = extractDescriptionFromDM(dm.content);
+          
+          invoices.push({
+            id: dm.id,
+            amount,
+            description,
+            payment_request,
+            receivedAt: new Date(dm.createdAt * 1000),
+            paid: false
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to parse invoice from DM:', error);
+      }
+    });
+    
+    return invoices;
+  };
+
+  const extractAmountFromInvoice = (paymentRequest: string): number => {
+    try {
+      // Basic Lightning invoice amount extraction
+      // Format: ln + bc/tb/bcrt + amount + multiplier
+      const match = paymentRequest.match(/ln(bc|tb|bcrt)(\d+)([munp]?)/i);
+      if (match && match[2]) {
+        let amount = parseInt(match[2]);
+        const multiplier = match[3]?.toLowerCase();
+        
+        // Convert to sats based on multiplier
+        switch (multiplier) {
+          case 'm': amount *= 100000; break;     // milli-bitcoin
+          case 'u': amount *= 100; break;        // micro-bitcoin  
+          case 'n': amount *= 0.1; break;       // nano-bitcoin
+          case 'p': amount *= 0.0001; break;    // pico-bitcoin
+          default: amount *= 100000000; break;  // bitcoin (no multiplier)
+        }
+        
+        return Math.floor(amount);
+      }
+    } catch (error) {
+      console.error('Failed to extract amount from invoice:', error);
+    }
+    
+    return 0; // Default fallback
+  };
+
+  const extractDescriptionFromDM = (content: string): string => {
+    // Try to extract description from common patterns
+    const lines = content.split('\n');
+    
+    // Look for lines that might contain description
+    for (const line of lines) {
+      if (line.toLowerCase().includes('description:') || 
+          line.toLowerCase().includes('memo:') ||
+          line.toLowerCase().includes('for:')) {
+        return line.replace(/^(description|memo|for):\s*/i, '').trim();
+      }
+    }
+    
+    // Look for medical-related keywords
+    if (content.toLowerCase().includes('medical') || 
+        content.toLowerCase().includes('bill') ||
+        content.toLowerCase().includes('invoice')) {
+      return 'Medical bill payment';
+    }
+    
+    // Fallback to first line if it's not too long
+    const firstLine = lines[0]?.trim();
+    if (firstLine && firstLine.length < 100 && !firstLine.startsWith('ln')) {
+      return firstLine;
+    }
+    
+    return 'Payment request';
   };
 
   const handlePaymentComplete = (bill: PendingBill, result: any) => {
