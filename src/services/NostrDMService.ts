@@ -18,6 +18,9 @@ class NostrDMService {
     'wss://relay.nostr.band'
   ];
 
+  private static cachedDMs: DecryptedDM[] = [];
+  private static lastSuccessfulFetch: number = 0;
+
   constructor() {
     this.pool = new SimplePool();
   }
@@ -52,11 +55,16 @@ class NostrDMService {
       const filter = {
         kinds: [4],
         '#p': [hexPubkey],
-        since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
+        // since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
         limit: 100
       };
 
+      console.log('🔍 About to query relays with filter:', filter);
+      console.log('🔍 Relay pool state:', this.pool);
+      console.log('🔍 Active relays:', this.relays);
+
       const events = await this.pool.querySync(this.relays, filter);
+      console.log(`📬 Raw events from relay query:`, events);
       console.log(`📬 Found ${events.length} DM events`);
 
       // Decrypt and parse DMs
@@ -81,8 +89,28 @@ class NostrDMService {
           console.warn('Failed to decrypt DM:', decryptError);
         }
       }
+
+      if (decryptedDMs.length > 0) {
+        console.log(`💾 Caching ${decryptedDMs.length} DMs for fallback!`);
+        NostrDMService.cachedDMs = decryptedDMs;
+        NostrDMService.lastSuccessfulFetch = Date.now();
+        return decryptedDMs.sort((a, b) => b.createdAt - a.createdAt);
+      }
       
-      return decryptedDMs.sort((a, b) => b.createdAt - a.createdAt);
+      // If we got no results, check if we have cached data
+      if (decryptedDMs.length === 0 && NostrDMService.cachedDMs.length > 0) {
+        const cacheAge = Date.now() - NostrDMService.lastSuccessfulFetch;
+        const cacheMaxAge = 5 * 60 * 1000; // 5 minutes
+        
+        if (cacheAge < cacheMaxAge) {
+          console.log(`📦 Using cached DMs (${NostrDMService.cachedDMs.length} items, age: ${Math.round(cacheAge/1000)}s)`);
+          return NostrDMService.cachedDMs;
+        } else {
+          console.log(`📦 Cache expired (age: ${Math.round(cacheAge/1000)}s), returning empty`);
+        }
+      }
+
+      return [];
       
     } catch (error) {
       console.error('Failed to fetch DMs:', error);

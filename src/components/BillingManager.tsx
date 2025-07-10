@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { InvoicePayment } from './InvoicePayment';
 import LightningService from '../services/LightningService';
 import NostrDMService from '../services/NostrDMService';
@@ -19,59 +20,118 @@ export const BillingManager: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
 
-  useEffect(() => {
-    checkWalletConnection();
-    loadPendingBills();
-    return () => {
-      // Cleanup when component unmounts
-      NostrDMService.disconnect();
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      console.log('💰 BillingManager focused - navigation count:', Math.random());
+      checkWalletConnection();
+      loadPendingBills();
+      return () => {
+        console.log('💰 BillingManager unfocused - cleaning up');
+        // TEMPORARILY COMMENT OUT TO TEST IF THIS IS THE ISSUE
+        // NostrDMService.disconnect();
+      };
+    }, [])
+  );
 
   const checkWalletConnection = async () => {
     try {
+      console.log('🔍 Checking wallet connection...');
       await LightningService.connect();
       setWalletConnected(true);
       const walletBalance = await LightningService.getBalance();
       setBalance(walletBalance);
+      console.log('✅ Wallet connected, balance:', walletBalance);
     } catch (error) {
-      console.error('Wallet connection failed:', error);
+      console.error('❌ Wallet connection failed:', error);
       setWalletConnected(false);
     }
   };
 
   const loadPendingBills = async () => {
     try {
-      console.log('🔍 Loading pending bills from Nostr DMs...');
+      console.log('🔍 === STARTING loadPendingBills ===');
+      console.log('🔍 Current pendingBills state:', pendingBills.length, 'bills');
       
       // Get current user's pubkey
+      console.log('🔍 Getting user pubkey...');
       const userPubkey = await NostrDMService.getCurrentUserPubkey();
-      console.log('User pubkey:', userPubkey.substring(0, 16) + '...');
+      console.log('👤 User pubkey:', userPubkey ? userPubkey.substring(0, 16) + '...' : 'NULL');
+      
+      if (!userPubkey) {
+        console.log('❌ No user pubkey found - aborting');
+        setPendingBills([]);
+        return;
+      }
+      
+      // FORCE DISCONNECT AND RECONNECT TO TEST
+      console.log('🔄 Force disconnecting NostrDMService...');
+      NostrDMService.disconnect();
+      
+      console.log('🔄 Waiting 100ms before reconnect...');
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Fetch DMs
+      console.log('📬 Fetching DMs for pubkey:', userPubkey.substring(0, 16) + '...');
       const dms = await NostrDMService.getDirectMessages(userPubkey);
-      console.log(`📬 Found ${dms.length} DMs`);
+      console.log(`📬 Raw DMs received:`, dms);
+      console.log(`📬 DMs count: ${dms ? dms.length : 'NULL'}`);
+      
+      if (!dms) {
+        console.log('❌ DMs is null/undefined - setting empty bills');
+        setPendingBills([]);
+        return;
+      }
+      
+      if (dms.length === 0) {
+        console.log('📬 No DMs found - this might be the issue!');
+        setPendingBills([]);
+        return;
+      }
+      
+      // Log each DM for inspection
+      dms.forEach((dm, index) => {
+        console.log(`📩 DM ${index}:`, {
+          id: dm.id,
+          content: dm.content?.substring(0, 100) + '...',
+          createdAt: dm.createdAt,
+          hasInvoice: dm.content?.match(/(ln(bc|tb|bcrt)[a-zA-Z0-9]+)/i) ? 'YES' : 'NO'
+        });
+      });
       
       // Parse invoices from DMs
+      console.log('💰 Parsing invoices from DMs...');
       const invoices = parseInvoicesFromDMs(dms);
-      console.log(`💰 Parsed ${invoices.length} invoices`);
+      console.log(`💰 Parsed ${invoices.length} invoices:`, invoices);
       
+      console.log('💰 Setting pendingBills state to:', invoices);
       setPendingBills(invoices);
+      console.log('🔍 === FINISHED loadPendingBills ===');
+      
     } catch (error) {
       console.error('❌ Failed to load pending bills:', error);
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       // Keep empty array if loading fails
       setPendingBills([]);
     }
   };
 
   const parseInvoicesFromDMs = (dms: any[]): PendingBill[] => {
+    console.log('🔍 parseInvoicesFromDMs called with', dms.length, 'DMs');
     const invoices: PendingBill[] = [];
     
-    dms.forEach(dm => {
+    dms.forEach((dm, index) => {
       try {
+        console.log(`🔍 Parsing DM ${index}:`, dm.content?.substring(0, 50) + '...');
+        
         // Look for Lightning invoice pattern in DM content
         const invoiceMatch = dm.content.match(/(ln(bc|tb|bcrt)[a-zA-Z0-9]+)/i);
         if (invoiceMatch) {
+          console.log('⚡ Found invoice in DM:', invoiceMatch[1].substring(0, 20) + '...');
+          
           const payment_request = invoiceMatch[1];
           
           // Extract amount from invoice (basic parsing)
@@ -80,20 +140,26 @@ export const BillingManager: React.FC = () => {
           // Extract description from DM content
           const description = extractDescriptionFromDM(dm.content);
           
-          invoices.push({
+          const invoice = {
             id: dm.id,
             amount,
             description,
             payment_request,
             receivedAt: new Date(dm.createdAt * 1000),
             paid: false
-          });
+          };
+          
+          console.log('💰 Created invoice:', invoice);
+          invoices.push(invoice);
+        } else {
+          console.log('❌ No invoice found in DM', index);
         }
       } catch (error) {
-        console.warn('Failed to parse invoice from DM:', error);
+        console.warn('❌ Failed to parse invoice from DM:', error);
       }
     });
     
+    console.log('💰 parseInvoicesFromDMs returning:', invoices.length, 'invoices');
     return invoices;
   };
 
@@ -189,6 +255,13 @@ export const BillingManager: React.FC = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Lightning Wallet & Billing</Text>
       
+      {/* DEBUG INFO */}
+      <View style={styles.debugInfo}>
+        <Text style={styles.debugText}>
+          Debug: {pendingBills.length} bills in state
+        </Text>
+      </View>
+      
       {/* Wallet Status */}
       <View style={styles.walletStatus}>
         <View style={styles.statusRow}>
@@ -211,6 +284,11 @@ export const BillingManager: React.FC = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* MANUAL REFRESH BUTTON FOR TESTING */}
+      <TouchableOpacity style={styles.refreshButton} onPress={loadPendingBills}>
+        <Text style={styles.refreshButtonText}>🔄 Manual Refresh Bills</Text>
+      </TouchableOpacity>
 
       {/* Pending Bills */}
       <View style={styles.section}>
@@ -266,6 +344,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#2c3e50',
+  },
+  debugInfo: {
+    backgroundColor: '#fff3cd',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#856404',
+  },
+  refreshButton: {
+    backgroundColor: '#6c757d',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 16,
+  },
+  refreshButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   walletStatus: {
     backgroundColor: '#f8f9fa',

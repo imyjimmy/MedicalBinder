@@ -65,10 +65,10 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
           text: 'Manage Keys', 
           onPress: () => setShowKeyManager(true)
         },
-        { 
-          text: 'Billing', 
-          onPress: () => setShowBilling(true)
-        },
+        // { 
+        //   text: 'Billing', 
+        //   onPress: () => setShowBilling(true)
+        // },
         { text: 'Logout', style: 'destructive', onPress: onPress },
       ]
     );
@@ -150,7 +150,7 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
         </SafeAreaView>
       </Modal>
       {/* Billing Modal */}
-      <Modal
+      {/* <Modal
         visible={showBilling}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -169,7 +169,7 @@ export const ProfileIcon: React.FC<ProfileIconProps> = ({ pubkey, onPress }) => 
             <BillingManager />
           </ScrollView>
         </SafeAreaView>
-      </Modal>
+      </Modal> */}
     </>
   );
 };
