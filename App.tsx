@@ -29,12 +29,12 @@ export type RootStackParamList = {
     repoName: string;
     token: string;
   };
-  ActiveBinder: {  // Add this
+  ActiveBinder: {
     repoPath: string;
     repoName: string;
     token: string;
     sharedElementId: string;
-    currentPage: number;
+    currentPage?: number;
   };
   VideoConference: undefined;
 };

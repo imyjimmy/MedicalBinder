@@ -53,8 +53,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   const loadClonedRepos = async () => {
     try {
       const storedRepos = await AsyncStorage.getItem('clonedRepos');
+      console.log('Raw AsyncStorage data:', storedRepos);
       if (storedRepos) {
         const parsedRepos = JSON.parse(storedRepos);
+        console.log('Parsed repos:', parsedRepos);
+
         // Convert clonedAt strings back to Date objects
         const reposWithDates = parsedRepos.map((repo: any) => ({
           ...repo,
@@ -77,20 +80,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     }
   };
 
-  // const handleScanSuccess: ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token?: string) => {
-  //   setClonedRepos(prev => [...prev, { url: repoUrl, path: localPath, name: name, clonedAt: new Date(), token: token }]);
-  //   setShowQRScanner(false);
-  // };
-  const clearAllRepos = async () => {
-    try {
-      await AsyncStorage.removeItem('clonedRepos');
-      setClonedRepos([]);
-      console.log('Cleared all cloned repositories');
-    } catch (error) {
-      console.error('Failed to clear repos:', error);
-    }
-  };
-
   const deleteRepo = async (index: number) => {
     const updatedRepos = clonedRepos.filter((_, i) => i !== index);
     setClonedRepos(updatedRepos);
@@ -104,17 +93,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     await saveClonedRepos(updatedRepos);
     setShowQRScanner(false);
   };
-
-  // Show loading state while repos are being loaded
-  // if (loading) {
-  //   return (
-  //     <SafeAreaView style={styles.container}>
-  //       <View style={[styles.binderContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-  //         <Text>Loading medical binders...</Text>
-  //       </View>
-  //     </SafeAreaView>
-  //   );
-  // }
 
   const handleScanError = (error: string) => {
     console.error('QR Scan Error:', error);
@@ -163,13 +141,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   );
 
   const handleAddMedicalBinder = () => {
-    // TODO: Navigate to create/add medical binder flow
     console.log('Add Medical Binder pressed');
     setShowQRScanner(true);
     // For now, you might want to navigate to QR scanner or create repo flow
     // navigation.navigate('CreateBinder');
   };
 
+  /* State Depdendent UI */
   // the button navigation text changes depending on if the Binder has been opened
   const getButtonText = (repo: ClonedRepo) => {
     const isActive = activeBinder === repo.name;
@@ -180,6 +158,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     }
     console.log('currentPage: ', currentPage, binderPages);
     return isActive ? "Continue Reading 📖" : "Open 📖";
+  };
+
+  const shouldShowPrimaryRecordButton = () => {
+    return activeBinder !== null && clonedRepos.length > 0;
+  }
+
+  const handleRecord = () => {
+    console.log('handleRecord pressed');
   };
 
   return (
@@ -208,6 +194,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
         </TouchableOpacity> 
       </View>*/}
       <View style={styles.binderContainer}>
+        {/* Add Medical Binder button at top when there's an active binder */}
+        {shouldShowPrimaryRecordButton() && (
+          <View style={styles.topButtonContainer}>
+            <TouchableOpacity 
+              style={styles.addButtonSecondary}
+              onPress={handleAddMedicalBinder}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {sortedRepos.map((repo, index) => (
           <SharedElement
             style={[
@@ -244,13 +242,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
         ))}
         {/* Centered Add Button in Lower Third */}
         <View style={styles.binderContent}>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddMedicalBinder}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.addButtonText}>Add a Medical Binder</Text>
-          </TouchableOpacity>
+          {shouldShowPrimaryRecordButton() ? (
+            <TouchableOpacity 
+              style={styles.recordButton}
+              onPress={handleRecord}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.recordButtonText}>🔴 Record Doctor Appointment</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={handleAddMedicalBinder}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addButtonText}>Add a Medical Binder</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       <Modal
@@ -278,6 +286,57 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8, // Android shadow
     transform: [{ scale: 1.02 }], // Slight scale up for prominence
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 25,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    minWidth: 250,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  addButtonSecondary: {
+    width: 60,           // Fixed width and height for perfect circle
+    height: 60,
+    borderRadius: 30,    // Half of width/height for circle
+    backgroundColor: '#409CFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  recordButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 30,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    minWidth: 250,
+    alignItems: 'center',
+  },
+  recordButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   binderItem: {
     flexDirection: 'column',
@@ -330,25 +389,6 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontSize: 16,
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 25,
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    minWidth: 250,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
   },
   openButton: {
     // width: 44,
@@ -460,26 +500,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  topButtonContainer: {
+    alignItems: 'center',
+    marginBottom: '12',
+    width: '100%',
+  }
 });
-
-{/* <View style={styles.buttonContainer}>
-  <TouchableOpacity
-    style={styles.addRecordButton}
-    onPress={() => navigateToAddRecord(repo)}
-  >
-    <Text style={styles.addRecordButtonText}>📝 Add Record</Text>
-  </TouchableOpacity>
-  
-  <TouchableOpacity
-    style={[
-      styles.pushButton, 
-      isPushing[repo.name] && styles.pushButtonDisabled
-    ]}
-    onPress={() => handlePushRepo(repo)}
-    disabled={isPushing[repo.name]}
-  >
-    <Text style={styles.pushButtonText}>
-      {isPushing[repo.name] ? '⏳ Pushing...' : '📤 Push'}
-    </Text>
-  </TouchableOpacity>
-</View> */}
