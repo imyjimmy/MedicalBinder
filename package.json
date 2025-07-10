@@ -11,7 +11,7 @@
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint .",
-    "clean": "yarn clean:metro && yarn clean:ios && yarn clean:modules",
+    "clean": "yarn clean:metro-cache-only && yarn clean:ios && yarn clean:modules",
     "clean:metro": "npx react-native start --reset-cache || true",
     "clean:metro-cache-only": "rm -rf $TMPDIR/metro-* && rm -rf $TMPDIR/react-* && rm -rf node_modules/.cache",
     "clean:ios": "cd ios && rm -rf build/ && rm -rf Pods/ && rm -f Podfile.lock && cd ..",

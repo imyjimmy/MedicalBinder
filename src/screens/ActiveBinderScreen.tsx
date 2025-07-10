@@ -46,13 +46,16 @@ export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route })
       headerLeft: () => (
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate('Home', {
+            currentPage: currentPage,
+            repoName: repoName
+          })}
         >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, currentPage, repoName]);
 
   useEffect(() => {
     loadMedicalRecords();
@@ -100,6 +103,7 @@ export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route })
   const handleScroll = (event: any) => {
     const page = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
     setCurrentPage(page);
+    navigation.setParams({ currentPage: page, repoName: repoName});
   };
 
   const renderBinderCover = () => (

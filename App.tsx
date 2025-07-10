@@ -20,7 +20,10 @@ import { KeychainService } from './src/services/KeychainService';
 
 // Define your navigation params
 export type RootStackParamList = {
-  Home: undefined;
+  Home: {
+    currentPage?: number;
+    repoName?: string;
+  };
   AddRecord: {
     repoPath: string;
     repoName: string;
@@ -31,6 +34,7 @@ export type RootStackParamList = {
     repoName: string;
     token: string;
     sharedElementId: string;
+    currentPage: number;
   };
   VideoConference: undefined;
 };

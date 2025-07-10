@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -20,13 +21,16 @@ type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 interface HomeScreenProps {
   onLogout: () => void;
+  route: RouteProp<RootStackParamList, 'Home'>;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [clonedRepos, setClonedRepos] = useState<Array<ClonedRepo>>([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
+  const [activeBinder, setActiveBinder] = useState<string | null>(null);
+  const [binderPages, setBinderPages] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadClonedRepos();
@@ -35,6 +39,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const handleTelehealthPress = () => {
     navigation.navigate('VideoConference');
   };
+
+  const sortedRepos = useMemo(() => {
+    if (!activeBinder) return clonedRepos;
+    
+    return [...clonedRepos].sort((a, b) => {
+      if (a.name === activeBinder) return 1;  // Active binder to end
+      if (b.name === activeBinder) return -1;
+      return 0; // Maintain original order for others
+    });
+  }, [clonedRepos, activeBinder]);
 
   const loadClonedRepos = async () => {
     try {
@@ -51,7 +65,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     } catch (error) {
       console.error('Failed to load cloned repos:', error);
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
@@ -92,15 +106,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   };
 
   // Show loading state while repos are being loaded
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={[styles.binderContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text>Loading medical binders...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <SafeAreaView style={styles.container}>
+  //       <View style={[styles.binderContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+  //         <Text>Loading medical binders...</Text>
+  //       </View>
+  //     </SafeAreaView>
+  //   );
+  // }
 
   const handleScanError = (error: string) => {
     console.error('QR Scan Error:', error);
@@ -122,6 +136,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const navigateToActiveBinder = (repo: ClonedRepo, index: number) => {
     console.log('Opening binder:', repo);
     console.log('Navigating with shared element ID:', `binder-${index}`);
+    setActiveBinder(repo.name);
 
     navigation.navigate('ActiveBinder', { 
       repoPath: repo.path,
@@ -131,6 +146,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     });
   };
 
+  // Update page when navigating or adding records
+  const updateBinderPage = (binderName: string, pageNumber: number) => {
+    setBinderPages(prev => ({ ...prev, [binderName]: pageNumber }));
+  };
+
+  // get the current page number from ActiveBinderScreen
+  useFocusEffect(
+    useCallback(() => {
+      // Check if we're returning from ActiveBinderScreen with page info
+      const params = route.params;
+      if (params?.currentPage && params?.repoName) {
+        updateBinderPage(params.repoName, params.currentPage);
+      }
+    }, [route.params])
+  );
+
   const handleAddMedicalBinder = () => {
     // TODO: Navigate to create/add medical binder flow
     console.log('Add Medical Binder pressed');
@@ -139,20 +170,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     // navigation.navigate('CreateBinder');
   };
 
-  // if (loading) {
-  //   return (
-  //     <SafeAreaView style={styles.container}>
-  //       <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
-  //         <Text>Loading medical binders...</Text>
-  //       </View>
-  //     </SafeAreaView>
-  //   );
-  // }
+  // the button navigation text changes depending on if the Binder has been opened
+  const getButtonText = (repo: ClonedRepo) => {
+    const isActive = activeBinder === repo.name;
+    const currentPage = binderPages[repo.name];
+    
+    if (isActive && currentPage) {
+      return `Go to Page ${currentPage}`;
+    }
+    console.log('currentPage: ', currentPage, binderPages);
+    return isActive ? "Continue Reading 📖" : "Open 📖";
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Main Content Area */}
-      {/* Telehealth Appointment Rectangle */}
+      {/* Telehealth Appointment Rectangle -- @todo
       <View style={styles.telehealthContainer}>
         <TouchableOpacity
           style={styles.telehealthRectangle}
@@ -172,12 +205,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <Text style={styles.telehealthJoinText}>Join Call</Text>
             </View>
           </View>
-        </TouchableOpacity>
-      </View>
+        </TouchableOpacity> 
+      </View>*/}
       <View style={styles.binderContainer}>
-        {clonedRepos.map((repo, index) => (
+        {sortedRepos.map((repo, index) => (
           <SharedElement
-            style={styles.repoItem}
+            style={[
+              styles.binderItem,
+              activeBinder === repo.name && styles.activeBinderItem
+            ]}
             id={`binder-${index}`} 
             key={index} 
             onNode={(node) => {
@@ -201,7 +237,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                 onPress={() => navigateToActiveBinder(repo, index)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.openButtonText}>Open 📖</Text>
+                <Text style={styles.openButtonText}>{getButtonText(repo)}</Text>
               </TouchableOpacity>
             </View>
           </SharedElement>
@@ -233,6 +269,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 };
 
 const styles = StyleSheet.create({
+  activeBinderItem: {
+    borderWidth: 3,
+    borderColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8, // Android shadow
+    transform: [{ scale: 1.02 }], // Slight scale up for prominence
+  },
+  binderItem: {
+    flexDirection: 'column',
+    // alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    width: '100%',
+    padding: 15,
+    paddingBottom: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#757575',
+    borderStyle: 'solid',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 6, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   binderInteractiveButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -307,25 +372,6 @@ const styles = StyleSheet.create({
   },
   repoInfo: {
     marginBottom: 10,
-  },
-  repoItem: {
-    flexDirection: 'column',
-    // alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    width: '100%',
-    padding: 15,
-    paddingBottom: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#757575',
-    borderStyle: 'solid',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 6, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   repoName: {
     fontSize: 16,
