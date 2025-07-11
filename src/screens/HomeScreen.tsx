@@ -83,6 +83,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   const deleteRepo = async (index: number) => {
     const updatedRepos = clonedRepos.filter((_, i) => i !== index);
     setClonedRepos(updatedRepos);
+    setActiveBinder(null);
     await saveClonedRepos(updatedRepos);
   };
 
@@ -114,7 +115,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   const navigateToActiveBinder = (repo: ClonedRepo, index: number) => {
     console.log('Opening binder:', repo);
     console.log('Navigating with shared element ID:', `binder-${index}`);
-    setActiveBinder(repo.name);
+    // setActiveBinder(repo.name);
 
     navigation.navigate('ActiveBinder', { 
       repoPath: repo.path,
@@ -122,6 +123,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
       token: repo.token ?? '',
       sharedElementId: `binder-${index}`,
     });
+
+    // navigation.navigate('FolderScreen');
   };
 
   // Update page when navigating or adding records
@@ -134,8 +137,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     useCallback(() => {
       // Check if we're returning from ActiveBinderScreen with page info
       const params = route.params;
-      if (params?.currentPage && params?.repoName) {
-        updateBinderPage(params.repoName, params.currentPage);
+      if (params?.repoName) {
+        // NOW set the active binder - user has actually used it
+        setActiveBinder(params.repoName);
+        
+        // Also update page info if available
+        if (params?.currentPage) {
+          updateBinderPage(params.repoName, params.currentPage);
+        }
       }
     }, [route.params])
   );
@@ -156,8 +165,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     if (isActive && currentPage) {
       return `Go to Page ${currentPage}`;
     }
-    console.log('currentPage: ', currentPage, binderPages);
-    return isActive ? "Continue Reading 📖" : "Open 📖";
+    //console.log('currentPage: ', currentPage, binderPages);
+    return "Open 📖";
   };
 
   const shouldShowPrimaryRecordButton = () => {
@@ -192,7 +201,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
             </View>
           </View>
         </TouchableOpacity> 
-      </View>*/}
+      </View> */}
       <View style={styles.binderContainer}>
         {/* Add Medical Binder button at top when there's an active binder */}
         {shouldShowPrimaryRecordButton() && (
@@ -202,7 +211,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
               onPress={handleAddMedicalBinder}
               activeOpacity={0.8}
             >
-              <Text style={styles.addButtonText}>+</Text>
+              <Text style={styles.addButtonTextSecondary}>+ Binder</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -306,13 +315,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  addButtonTextSecondary: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
   addButtonSecondary: {
-    width: 60,           // Fixed width and height for perfect circle
+    // width: 60,           // Fixed width and height for perfect circle
     height: 60,
     borderRadius: 30,    // Half of width/height for circle
-    backgroundColor: '#409CFF',
+    backgroundColor: '#2e2e2e',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -502,7 +518,7 @@ const styles = StyleSheet.create({
   },
   topButtonContainer: {
     alignItems: 'center',
-    marginBottom: '12',
+    marginBottom: 12,
     width: '100%',
   }
 });
