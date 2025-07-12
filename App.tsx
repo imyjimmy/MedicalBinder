@@ -15,6 +15,7 @@ import { AddRecordScreen } from './src/screens/AddRecordScreen';
 import { ActiveBinderScreen } from './src/screens/ActiveBinderScreen';
 import { VideoConferenceScreen } from './src/screens/VideoConferenceScreen';
 import { KeychainService } from './src/services/KeychainService';
+import SimpleAudioRecorderComponent from './src/components/SimpleAudioRecorder';
 
 // import { binderExpandTransition, binderTransitionSpec } from './src/animations/binderTransition';
 
@@ -170,6 +171,7 @@ function App(): React.JSX.Element {
           />
         </Stack.Navigator>
       </NavigationContainer>
+      <SimpleAudioRecorderComponent />
     </SafeAreaProvider>
   );
 }
