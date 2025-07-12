@@ -181,13 +181,13 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
     <View style={styles.tabContent}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>📝 Text Notes</Text>
+          <Text style={styles.cardTitle}>📝 Note</Text>
           <Text style={styles.cardDescription}>
             Write down your medical information, symptoms, or observations
           </Text>
         </View>
         <View style={styles.cardContent}>
-          <Text style={styles.label}>Medical Notes</Text>
+          <Text style={styles.label}>Medical Note</Text>
           <TextInput
             style={styles.textArea}
             placeholder="Enter your medical notes here... (e.g., symptoms, medications, doctor visits, test results)"
