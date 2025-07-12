@@ -16,6 +16,7 @@ import type { RootStackParamList } from '../../App';
 import { SharedElement } from 'react-native-shared-element';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import SQLiteTest from '../components/SQLiteTest';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -202,6 +203,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
           </View>
         </TouchableOpacity> 
       </View> */}
+      <SQLiteTest />
       <View style={styles.binderContainer}>
         {/* Add Medical Binder button at top when there's an active binder */}
         {shouldShowPrimaryRecordButton() && (
