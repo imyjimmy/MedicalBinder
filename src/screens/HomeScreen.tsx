@@ -15,6 +15,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 import { SharedElement } from 'react-native-shared-element';
 import { useNavigation } from '@react-navigation/native';
+import { PathUtils } from '../utils/pathUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
@@ -53,11 +54,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   const loadClonedRepos = async () => {
     try {
       const storedRepos = await AsyncStorage.getItem('clonedRepos');
-      console.log('Raw AsyncStorage data:', storedRepos);
       if (storedRepos) {
         const parsedRepos = JSON.parse(storedRepos);
-        console.log('Parsed repos:', parsedRepos);
-
         // Convert clonedAt strings back to Date objects
         const reposWithDates = parsedRepos.map((repo: any) => ({
           ...repo,
@@ -87,8 +85,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     await saveClonedRepos(updatedRepos);
   };
 
-  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string, token?: string) => {
-    const newRepo = { name: name, url: repoUrl, path: localPath, clonedAt: new Date(), token: token };
+  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string) => {
+    // Convert absolute path to relative path for storage
+    const relativePath = PathUtils.toRelativePath(localPath);
+    
+    const newRepo = { 
+      name: name, 
+      url: repoUrl, 
+      path: relativePath, // Store relative path
+      clonedAt: new Date() 
+    };
+    
     const updatedRepos = [...clonedRepos, newRepo];
     setClonedRepos(updatedRepos);
     await saveClonedRepos(updatedRepos);
@@ -101,12 +108,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   };
 
   const navigateToAddRecord = (repo: ClonedRepo) => {
-    // Navigate to AddRecordScreen with repo details
+    const absolutePath = PathUtils.toAbsolutePath(repo.path);
     console.log('Navigating with repo:', repo);
     console.log('Repo path:', repo.path);
 
     navigation.navigate('AddRecord', { 
-      repoPath: repo.path,
+      repoPath: absolutePath,
       repoName: repo.name,
       token: repo.token ?? ''
     });
@@ -115,10 +122,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   const navigateToActiveBinder = (repo: ClonedRepo, index: number) => {
     console.log('Opening binder:', repo);
     console.log('Navigating with shared element ID:', `binder-${index}`);
-    // setActiveBinder(repo.name);
+    const absolutePath = PathUtils.toAbsolutePath(repo.path);
 
     navigation.navigate('ActiveBinder', { 
-      repoPath: repo.path,
+      repoPath: absolutePath,
       repoName: repo.name,
       token: repo.token ?? '',
       sharedElementId: `binder-${index}`,
