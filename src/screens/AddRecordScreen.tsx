@@ -179,30 +179,24 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   );
 
   const renderTextTab = () => (
-    <View style={styles.tabContent}>
+    <View style={styles.textTabContent}>
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
+        <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>📝 Note</Text>
           <Text style={styles.cardDescription}>
             Write down your medical information, symptoms, or observations
           </Text>
+          <View style={styles.textInputContainer}>
+            <TextInput
+              style={styles.expandableTextArea}
+              placeholder="Enter your medical notes here... (e.g., symptoms, medications, doctor visits, test results)"
+              value={recordText}
+              onChangeText={setRecordText}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
         </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.label}>Medical Note</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Enter your medical notes here... (e.g., symptoms, medications, doctor visits, test results)"
-            value={recordText}
-            onChangeText={setRecordText}
-            multiline
-            numberOfLines={8}
-            textAlignVertical="top"
-          />
-          {recordText && (
-            <Text style={styles.characterCount}>{recordText.length} characters</Text>
-          )}
-        </View>
-        <SimpleAudioRecorderComponent /> 
       </View>
     </View>
   );
@@ -297,15 +291,8 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
-        {/* <View style={styles.header}>
-          <Text style={styles.title}>Create Medical Record</Text>
-          <Text style={styles.subtitle}>
-            Add your medical information using any of the methods below
-          </Text>
-        </View> */}
-
-        {/* Tab Navigation */}
+      <View style={styles.content}>
+        {/* Tab Navigation - stays at top */}
         <View style={styles.tabContainer}>
           <View style={styles.tabList}>
             {renderTabButton('text', '📝', 'Notes')}
@@ -313,11 +300,6 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
             {renderTabButton('pdfs', '📄', 'PDFs')}
           </View>
         </View>
-
-        {/* Tab Content */}
-        {activeTab === 'text' && renderTextTab()}
-        {activeTab === 'photos' && renderPhotosTab()}
-        {activeTab === 'pdfs' && renderPdfsTab()}
 
         {/* Summary Card */}
         {hasContent && (
@@ -350,34 +332,28 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
           </View>
         )}
 
-        {/* Nostr Public Key Input */}
-        <View style={styles.card}>
-          <View style={styles.cardContent}>
-            <Text style={styles.label}>Nostr Public Key</Text>
-            <TextInput
-              style={[styles.input, styles.nostrInput]}
-              value={nostrPubkey}
-              onChangeText={setNostrPubkey}
-              placeholder="npub... or hex format"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={false}  // Add this line
-            />
-          </View>
-        </View>
+        {/* Scrollable Tab Content - takes remaining space */}
+        <ScrollView style={styles.scrollableContent} showsVerticalScrollIndicator={false}>
+          {activeTab === 'text' && renderTextTab()}
+          {activeTab === 'photos' && renderPhotosTab()}
+          {activeTab === 'pdfs' && renderPdfsTab()}
+        </ScrollView>
 
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, (!hasContent || !nostrPubkey.trim() || isCommitting) && styles.saveButtonDisabled]}
-          onPress={addRecord}
-          disabled={!hasContent || !nostrPubkey.trim() || isCommitting}
-        >
-          <Text style={styles.saveButtonIcon}>💾</Text>
-          <Text style={styles.saveButtonText}>
-            {isCommitting ? 'Saving Medical Record...' : 'Save Medical Record'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+        {/* Bottom buttons - stays at bottom */}
+        <View style={styles.bottomButtonContainer}>
+          <SimpleAudioRecorderComponent /> 
+          <TouchableOpacity
+            style={[styles.saveButton, (!hasContent || !nostrPubkey.trim() || isCommitting) && styles.saveButtonDisabled]}
+            onPress={addRecord}
+            disabled={!hasContent || !nostrPubkey.trim() || isCommitting}
+          >
+            <Text style={styles.saveButtonIcon}>💾</Text>
+            <Text style={styles.saveButtonText}>
+              {isCommitting ? 'Saving Medical Record...' : 'Save Medical Record'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -389,7 +365,31 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 12,
+  },
+  scrollableContent: {
+    flex: 1
+  },
+  textTabContent: {
+    flex: 1
+  },
+  expandableTextArea: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#ffffff',
+    height: '100%',
+    textAlignVertical: 'top',
+  },
+  textInputContainer: {
+    flex: 1,
+    minHeight: 300,
+  },
+  bottomButtonContainer: {
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   header: {
     alignItems: 'center',
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tabContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   tabList: {
     flexDirection: 'row',
@@ -451,6 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   card: {
+    flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     shadowColor: '#000',
@@ -474,9 +475,14 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: 14,
     color: '#6b7280',
+    marginBottom: 12,
   },
   cardContent: {
+    flex: 1,
+    flexDirection: 'column',
     padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   label: {
     fontSize: 16,
@@ -491,7 +497,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#ffffff',
-    minHeight: 120,
+    minHeight: 180,
     textAlignVertical: 'top',
   },
   input: {
@@ -653,7 +659,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     gap: 8,
-    marginBottom: 32,
   },
   saveButtonDisabled: {
     backgroundColor: '#d1d5db',
@@ -668,3 +673,19 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+
+{/* Nostr Public Key Input */}
+{/* <View style={styles.card}>
+  <View style={styles.cardContent}>
+    <Text style={styles.label}>Nostr Public Key</Text>
+    <TextInput
+      style={[styles.input, styles.nostrInput]}
+      value={nostrPubkey}
+      onChangeText={setNostrPubkey}
+      placeholder="npub... or hex format"
+      autoCapitalize="none"
+      autoCorrect={false}
+      editable={false}  // Add this line
+    />
+  </View>
+</View> */}

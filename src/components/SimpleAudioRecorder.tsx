@@ -4,10 +4,12 @@ import { AudioStorageService } from '../services/AudioStorageService';
 
 const { SimpleAudioRecorder } = NativeModules;
 
-const SimpleAudioRecorderComponent = () => {
+interface SimpleAudioRecorderProps {
+  onAudioRecorded?: (audioHash: string) => void;
+}
+
+const SimpleAudioRecorderComponent: React.FC<SimpleAudioRecorderProps> = ({ onAudioRecorded }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioPath, setAudioPath] = useState('');
-  const [audioHash, setAudioHash] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -29,8 +31,6 @@ const SimpleAudioRecorderComponent = () => {
     try {
       const filePath = await SimpleAudioRecorder.startRecording();
       setIsRecording(true);
-      setAudioPath('');
-      setAudioHash('');
       console.log('Recording started, will save to:', filePath);
     } catch (error) {
       console.error('Start recording error:', error);
@@ -45,19 +45,24 @@ const SimpleAudioRecorderComponent = () => {
       // Stop recording and get file path
       const filePath = await SimpleAudioRecorder.stopRecording();
       setIsRecording(false);
-      setAudioPath(filePath);
       
       // Store in hash-based SQLite storage
       const hash = await AudioStorageService.storeAudioFile(filePath, 'medical-recording.m4a');
-      setAudioHash(hash);
       
       console.log('Recording processed:', { filePath, hash: hash.substring(0, 12) + '...' });
       
-      Alert.alert(
-        'Success! 🎉', 
-        `Audio recorded and stored!\n\nHash: ${hash.substring(0, 12)}...`,
-        [{ text: 'OK' }]
-      );
+      // Auto-run debug functions (hidden from UI)
+      try {
+        await AudioStorageService.debugDatabase();
+        await AudioStorageService.testBinaryRetrieval(hash);
+      } catch (debugError) {
+        console.error('Debug functions failed:', debugError);
+      }
+      
+      // Notify parent component
+      if (onAudioRecorded) {
+        onAudioRecorded(hash);
+      }
       
     } catch (error) {
       console.error('Stop recording error:', error);
@@ -67,156 +72,108 @@ const SimpleAudioRecorderComponent = () => {
     }
   };
 
-  const testSQLiteRetrieval = async () => {
-    if (!audioHash) {
-      Alert.alert('Error', 'No audio hash available. Record something first.');
-      return;
-    }
-    
-    try {
-      setIsProcessing(true);
-      const success = await AudioStorageService.testBinaryRetrieval(audioHash);
-      
-      if (success) {
-        Alert.alert(
-          'SQLite Test Success! 🎉',
-          'Binary data retrieved from SQLite and written to test file. Check console for details.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert('Test Failed', 'Could not retrieve binary data from SQLite');
-      }
-    } catch (error) {
-      console.error('SQLite test error:', error);
-      Alert.alert('Error', 'SQLite test failed');
-    } finally {
-      setIsProcessing(false);
+  const handleRecordPress = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
-  const debugDatabase = async () => {
-  try {
-    setIsProcessing(true);
-    await AudioStorageService.debugDatabase();
-    Alert.alert('Debug Complete', 'Check console for database contents');
-  } catch (error) {
-    console.error('Debug error:', error);
-  } finally {
-    setIsProcessing(false);
-  }
-};
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>🎙️ Audio → SQLite Pipeline</Text>
-      
-      <TouchableOpacity
-        style={[
-          styles.button, 
-          isRecording ? styles.stopButton : styles.startButton,
-          isProcessing && styles.disabledButton
-        ]}
-        onPress={isRecording ? stopRecording : startRecording}
-        disabled={isProcessing}
-      >
-        <Text style={styles.buttonText}>
-          {isProcessing ? 'Processing...' : 
-           isRecording ? 'Stop Recording' : 'Start Recording'}
-        </Text>
-      </TouchableOpacity>
-      
-      {audioPath ? (
-        <View style={styles.resultContainer}>
-          <Text style={styles.resultLabel}>📁 File:</Text>
-          <Text style={styles.pathText}>{audioPath}</Text>
+    <TouchableOpacity
+      style={[
+        styles.recordButton,
+        isRecording && styles.recordButtonActive,
+        isProcessing && styles.recordButtonDisabled
+      ]}
+      onPress={handleRecordPress}
+      disabled={isProcessing}
+    >
+      <View style={styles.recordIconContainer}>
+        <View style={[
+          styles.recordOuterRing,
+          isRecording && styles.recordOuterRingActive
+        ]}>
+          <View style={[
+            styles.recordInnerDot,
+            isRecording && styles.recordInnerDotActive
+          ]} />
         </View>
-      ) : null}
-      
-      {audioHash ? (
-        <View style={styles.resultContainer}>
-          <Text style={styles.resultLabel}>🔗 Hash:</Text>
-          <Text style={styles.hashText}>{audioHash.substring(0, 16)}...</Text>
-        </View>
-      ) : null}
-
-      {audioHash ? (
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: '#6f42c1' }]}
-          onPress={testSQLiteRetrieval}
-          disabled={isProcessing}
-        >
-          <Text style={styles.buttonText}>Test SQLite Binary</Text>
-        </TouchableOpacity>
-      ) : null}
-
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: '#fd7e14' }]}
-        onPress={debugDatabase}
-        disabled={isProcessing}
-      >
-        <Text style={styles.buttonText}>Debug Database</Text>
-      </TouchableOpacity>
-    </View>
+      </View>
+      <Text style={[
+        styles.buttonText,
+        isRecording && styles.buttonTextActive
+      ]}>
+        {isProcessing ? 'Processing...' :
+         isRecording ? 'Stop Recording' : 'Record Audio'}
+      </Text>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
+  recordButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f8ff',
-    borderRadius: 12,
-    margin: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    backgroundColor: '#ffffff',
     borderWidth: 2,
-    borderColor: '#007bff',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#007bff',
-  },
-  button: {
-    paddingHorizontal: 30,
-    paddingVertical: 15,
+    borderColor: '#dc3545',
     borderRadius: 8,
-    minWidth: 150,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  recordButtonActive: {
+    backgroundColor: '#dc3545',
+    borderColor: '#c82333',
+  },
+  recordButtonDisabled: {
+    opacity: 0.6,
+  },
+  recordIconContainer: {
+    marginRight: 12,
+  },
+  recordOuterRing: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#ffffff',
+    borderWidth: 4,
+    borderColor: '#dc3545',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
   },
-  startButton: {
-    backgroundColor: '#28a745',
+  recordOuterRingActive: {
+    backgroundColor: '#dc3545',
+    borderColor: '#c82333',
   },
-  stopButton: {
+  recordInnerDot: {
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
     backgroundColor: '#dc3545',
   },
-  disabledButton: {
-    backgroundColor: '#6c757d',
+  recordInnerDotActive: {
+    width: 18,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: '#ffffff',
   },
   buttonText: {
-    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#dc3545',
   },
-  resultContainer: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  resultLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#495057',
-  },
-  pathText: {
-    fontSize: 11,
-    color: '#6c757d',
-    textAlign: 'center',
-  },
-  hashText: {
-    fontSize: 12,
-    color: '#007bff',
-    fontFamily: 'monospace',
-    textAlign: 'center',
+  buttonTextActive: {
+    color: '#ffffff',
   },
 });
 

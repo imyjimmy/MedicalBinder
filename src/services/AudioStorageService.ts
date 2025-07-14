@@ -4,12 +4,15 @@ import { base64ToUint8Array } from '../utils/base64Utils';
 import RNFS from 'react-native-fs';
 
 export class AudioStorageService {
-  private static db = open({ name: 'medical_audio.db' });
+  private static db = open({ 
+    name: 'medical_audio.db',
+    location: RNFS.DocumentDirectoryPath  // Explicitly set location
+  });
 
   static async initialize() {
     try {
-      console.log('📝 Creating audio_files table...');
-      
+      const dbPath = `${RNFS.DocumentDirectoryPath}/medical_audio.db`;
+      console.log('🗄️ Database should be created at:', dbPath);
       // Create audio storage table with hash-based keys (BINARY STORAGE)
       this.db.execute(`
         CREATE TABLE IF NOT EXISTS audio_files (
@@ -24,12 +27,15 @@ export class AudioStorageService {
       
       console.log('✅ Audio binary storage table created');
       
-      // Verify table was created
-      const tableCheck = this.db.execute(`
-        SELECT name FROM sqlite_master WHERE type='table' AND name='audio_files';
-      `);
-      console.log('🔍 Table verification:', tableCheck.rows?._array);
+      // Force a write to ensure file creation
+      this.db.execute(`INSERT OR IGNORE INTO audio_files (hash, audio_data, file_size) VALUES ('test', 'test', 0);`);
+      this.db.execute(`DELETE FROM audio_files WHERE hash = 'test';`);
       
+      console.log('✅ Database initialization complete');
+      
+      // Check if file exists now
+      const fileExists = await RNFS.exists(dbPath);
+      console.log('📁 Database file exists:', fileExists);
     } catch (error) {
       console.error('❌ Failed to initialize audio storage:', error);
       throw error;
@@ -66,12 +72,16 @@ export class AudioStorageService {
 
       console.log(`✅ Audio BINARY stored in SQLite with hash: ${hash.substring(0, 12)}...`);
 
+      // const verifyResult = this.db.execute('SELECT COUNT(*) as count FROM audio_files WHERE hash = ?', [hash]);
+      // // Immediately verify it was stored
+      // console.log('🔍 Raw verification result:', verifyResult);
+      // console.log('🔍 Verification rows:', verifyResult.rows);
+      // // console.log('🔍 Verification count:', verifyResult.rows?.[0]?.count);
+      // console.log('🔍 Verification count:', verifyResult._z?.rows?.[0]?.count);
       const verifyResult = this.db.execute('SELECT COUNT(*) as count FROM audio_files WHERE hash = ?', [hash]);
-      // Immediately verify it was stored
       console.log('🔍 Raw verification result:', verifyResult);
       console.log('🔍 Verification rows:', verifyResult.rows);
-      // console.log('🔍 Verification count:', verifyResult.rows?.[0]?.count);
-      console.log('🔍 Verification count:', verifyResult._z?.rows?.[0]?.count);
+      console.log('🔍 Verification count:', verifyResult.rows?.[0]?.count);
 
       // Fix verification in storeAudioFile:
       return hash;
@@ -166,11 +176,18 @@ export class AudioStorageService {
     try {
       console.log('🔍 DEBUG: Checking database contents...');
       
-      // Check if table exists
+      // Check if table exists - fix the query result access
       const tableCheck = this.db.execute(`
         SELECT name FROM sqlite_master WHERE type='table' AND name='audio_files';
       `);
-      console.log('📋 Table exists:', tableCheck._z?.rows || []);
+      console.log('📋 Raw table check result:', tableCheck);
+      console.log('📋 Table exists rows:', tableCheck.rows);
+      
+      // Try different ways to access the data
+      if (tableCheck.rows) {
+        console.log('📋 Table rows length:', tableCheck.rows.length);
+        console.log('📋 First row:', tableCheck.rows[0]);
+      }
       
       // Get all rows (without binary data)
       const allRows = this.db.execute(`
@@ -178,7 +195,8 @@ export class AudioStorageService {
               LENGTH(audio_data) as data_length 
         FROM audio_files;
       `);
-      console.log('📊 All rows in database:', allRows._z?.rows || []);
+      console.log('📊 Raw all rows result:', allRows);
+      console.log('📊 All rows:', allRows.rows);
       
     } catch (error) {
       console.error('🚨 Database debug failed:', error);
