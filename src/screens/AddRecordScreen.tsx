@@ -15,6 +15,7 @@ import { RootStackParamList } from '../../App';
 import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import { NostrAuthService } from '../services/NostrAuthService';
+import SimpleAudioRecorderComponent from '../components/SimpleAudioRecorder';
 
 const MGitModule = NativeModules.MGitModule;
 
@@ -201,6 +202,7 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
             <Text style={styles.characterCount}>{recordText.length} characters</Text>
           )}
         </View>
+        <SimpleAudioRecorderComponent /> 
       </View>
     </View>
   );

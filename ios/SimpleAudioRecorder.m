@@ -1,6 +1,7 @@
 #import "SimpleAudioRecorder.h"
 #import <AVFoundation/AVFoundation.h>
 #import <React/RCTLog.h>
+#import <CommonCrypto/CommonDigest.h>
 
 @interface SimpleAudioRecorder ()
 @property (nonatomic, strong) AVAudioRecorder *audioRecorder;
@@ -64,6 +65,27 @@ RCT_EXPORT_METHOD(stopRecording:(RCTPromiseResolveBlock)resolve
     } else {
         reject(@"NOT_RECORDING", @"No active recording", nil);
     }
+}
+
+RCT_EXPORT_METHOD(generateSHA256:(NSString *)filePath
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+    
+    NSData *fileData = [NSData dataWithContentsOfFile:filePath];
+    if (!fileData) {
+        reject(@"FILE_ERROR", @"Could not read file", nil);
+        return;
+    }
+    
+    unsigned char hash[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(fileData.bytes, (CC_LONG)fileData.length, hash);
+    
+    NSMutableString *hashString = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
+    for (int i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) {
+        [hashString appendFormat:@"%02x", hash[i]];
+    }
+    
+    resolve(hashString);
 }
 
 @end
