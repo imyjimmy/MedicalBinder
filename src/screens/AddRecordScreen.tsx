@@ -8,13 +8,14 @@ import {
   TouchableOpacity, 
   Alert, 
   ScrollView,
-  Image
+  Switch
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import { NostrAuthService } from '../services/NostrAuthService';
+import SimpleAudioRecorderComponent from '../components/SimpleAudioRecorder';
 
 const MGitModule = NativeModules.MGitModule;
 
@@ -28,10 +29,14 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   const { repoPath, repoName, token } = route.params;
   const [activeTab, setActiveTab] = useState<TabType>('text');
   const [recordText, setRecordText] = useState('');
+  const [audioHash, setAudioHash] = useState('');
   const [nostrPubkey, setNostrPubkey] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [pdfs, setPdfs] = useState<string[]>([]);
   const [isCommitting, setIsCommitting] = useState(false);
+
+  // const [isDoctorAppt, setIsDoctorAppt] = useState(false);
+  // const toggleSwitch = () => setIsDoctorAppt(previousState => !previousState);
 
   useEffect(() => {
     const loadUserPubkey = async () => {
@@ -88,11 +93,12 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
         id: `record-${Date.now()}`, // Unique timestamp-based ID
         timestamp: new Date().toISOString(), // ISO timestamp for sorting/filtering
         content: recordText, // User's text content
-        photos: photos, // Array of photo attachments
-        pdfs: pdfs, // Array of PDF attachments
         author: {
           nostrPubkey: nostrPubkey // Nostr identity for verification
-        }
+        },
+        ...(audioHash && {audio: audioHash}),
+        ...(photos && { photos: photos }),
+        ...(pdfs && { pdfs: pdfs })
       };
 
       // Add new record to existing data array
@@ -178,28 +184,30 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   );
 
   const renderTextTab = () => (
-    <View style={styles.tabContent}>
+    <View style={styles.textTabContent}>
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>📝 Text Notes</Text>
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>📝 Note</Text>
           <Text style={styles.cardDescription}>
             Write down your medical information, symptoms, or observations
           </Text>
-        </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.label}>Medical Notes</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Enter your medical notes here... (e.g., symptoms, medications, doctor visits, test results)"
-            value={recordText}
-            onChangeText={setRecordText}
-            multiline
-            numberOfLines={8}
-            textAlignVertical="top"
-          />
-          {recordText && (
-            <Text style={styles.characterCount}>{recordText.length} characters</Text>
-          )}
+          <View style={styles.textInputContainer}>
+            <TextInput
+              style={styles.expandableTextArea}
+              placeholder="Enter your medical notes here... (e.g., symptoms, medications, doctor visits, test results)"
+              value={recordText}
+              onChangeText={setRecordText}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+          {/* <View style={styles.switchContainer}>
+            <Switch
+              onValueChange={toggleSwitch}
+              value={isDoctorAppt}
+            />
+            <Text style={styles.switchLabel}>Doctor's Appointment</Text>
+          </View> */}
         </View>
       </View>
     </View>
@@ -291,19 +299,18 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
     </View>
   );
 
+  /* audio functions */
+  const onAudioRecorded = (hash: string) => {
+    console.log('in AddRecordScreen, audio hash: ', hash);
+    setAudioHash(hash);
+  }
+
   const hasContent = recordText.trim() || photos.length > 0 || pdfs.length > 0;
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
-        {/* <View style={styles.header}>
-          <Text style={styles.title}>Create Medical Record</Text>
-          <Text style={styles.subtitle}>
-            Add your medical information using any of the methods below
-          </Text>
-        </View> */}
-
-        {/* Tab Navigation */}
+      <View style={styles.content}>
+        {/* Tab Navigation - stays at top */}
         <View style={styles.tabContainer}>
           <View style={styles.tabList}>
             {renderTabButton('text', '📝', 'Notes')}
@@ -311,11 +318,6 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
             {renderTabButton('pdfs', '📄', 'PDFs')}
           </View>
         </View>
-
-        {/* Tab Content */}
-        {activeTab === 'text' && renderTextTab()}
-        {activeTab === 'photos' && renderPhotosTab()}
-        {activeTab === 'pdfs' && renderPdfsTab()}
 
         {/* Summary Card */}
         {hasContent && (
@@ -348,34 +350,28 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
           </View>
         )}
 
-        {/* Nostr Public Key Input */}
-        <View style={styles.card}>
-          <View style={styles.cardContent}>
-            <Text style={styles.label}>Nostr Public Key</Text>
-            <TextInput
-              style={[styles.input, styles.nostrInput]}
-              value={nostrPubkey}
-              onChangeText={setNostrPubkey}
-              placeholder="npub... or hex format"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={false}  // Add this line
-            />
-          </View>
-        </View>
+        {/* Scrollable Tab Content - takes remaining space */}
+        <ScrollView style={styles.scrollableContent} showsVerticalScrollIndicator={false}>
+          {activeTab === 'text' && renderTextTab()}
+          {activeTab === 'photos' && renderPhotosTab()}
+          {activeTab === 'pdfs' && renderPdfsTab()}
+        </ScrollView>
 
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, (!hasContent || !nostrPubkey.trim() || isCommitting) && styles.saveButtonDisabled]}
-          onPress={addRecord}
-          disabled={!hasContent || !nostrPubkey.trim() || isCommitting}
-        >
-          <Text style={styles.saveButtonIcon}>💾</Text>
-          <Text style={styles.saveButtonText}>
-            {isCommitting ? 'Saving Medical Record...' : 'Save Medical Record'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+        {/* Bottom buttons - stays at bottom */}
+        <View style={styles.bottomButtonContainer}>
+          <SimpleAudioRecorderComponent onAudioRecorded={onAudioRecorded}/> 
+          <TouchableOpacity
+            style={[styles.saveButton, (!hasContent || !nostrPubkey.trim() || isCommitting) && styles.saveButtonDisabled]}
+            onPress={addRecord}
+            disabled={!hasContent || !nostrPubkey.trim() || isCommitting}
+          >
+            <Text style={styles.saveButtonIcon}>💾</Text>
+            <Text style={styles.saveButtonText}>
+              {isCommitting ? 'Saving Medical Record...' : 'Save Medical Record'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -387,7 +383,30 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 12,
+  },
+  scrollableContent: {
+    flex: 1
+  },
+  textTabContent: {
+    flex: 1
+  },
+  expandableTextArea: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#ffffff',
+    height: '100%',
+    textAlignVertical: 'top',
+  },
+  textInputContainer: {
+    flex: 1,
+    minHeight: 300,
+  },
+  bottomButtonContainer: {
+    paddingTop: 16,
   },
   header: {
     alignItems: 'center',
@@ -405,7 +424,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tabContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   tabList: {
     flexDirection: 'row',
@@ -449,6 +468,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   card: {
+    flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     shadowColor: '#000',
@@ -472,9 +492,14 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: 14,
     color: '#6b7280',
+    marginBottom: 12,
   },
   cardContent: {
+    flex: 1,
+    flexDirection: 'column',
     padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   label: {
     fontSize: 16,
@@ -489,7 +514,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#ffffff',
-    minHeight: 120,
+    minHeight: 180,
     textAlignVertical: 'top',
   },
   input: {
@@ -648,10 +673,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#007AFF',
     borderRadius: 12,
+    marginTop: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
     gap: 8,
-    marginBottom: 32,
   },
   saveButtonDisabled: {
     backgroundColor: '#d1d5db',
@@ -665,4 +690,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
+  switchContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 8
+  },
+  switchLabel: {
+    margin: 8
+  }
 });

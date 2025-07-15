@@ -35,7 +35,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to scan QR codes and for Telehealth feature.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Microphone permission description</string>
+	<string>This app needs access to microphone to record audio notes for medical records</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>UILaunchStoryboardName</key>

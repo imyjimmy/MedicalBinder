@@ -15,7 +15,6 @@ import { AddRecordScreen } from './src/screens/AddRecordScreen';
 import { ActiveBinderScreen } from './src/screens/ActiveBinderScreen';
 import { VideoConferenceScreen } from './src/screens/VideoConferenceScreen';
 import { KeychainService } from './src/services/KeychainService';
-
 // import { binderExpandTransition, binderTransitionSpec } from './src/animations/binderTransition';
 
 // Define your navigation params
