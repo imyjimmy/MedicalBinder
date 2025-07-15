@@ -8,7 +8,7 @@ import {
   TouchableOpacity, 
   Alert, 
   ScrollView,
-  Image
+  Switch
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
@@ -33,6 +33,9 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [pdfs, setPdfs] = useState<string[]>([]);
   const [isCommitting, setIsCommitting] = useState(false);
+
+  // const [isDoctorAppt, setIsDoctorAppt] = useState(false);
+  // const toggleSwitch = () => setIsDoctorAppt(previousState => !previousState);
 
   useEffect(() => {
     const loadUserPubkey = async () => {
@@ -196,6 +199,13 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
               textAlignVertical="top"
             />
           </View>
+          {/* <View style={styles.switchContainer}>
+            <Switch
+              onValueChange={toggleSwitch}
+              value={isDoctorAppt}
+            />
+            <Text style={styles.switchLabel}>Doctor's Appointment</Text>
+          </View> */}
         </View>
       </View>
     </View>
@@ -389,7 +399,6 @@ const styles = StyleSheet.create({
   },
   bottomButtonContainer: {
     paddingTop: 16,
-    paddingBottom: 8,
   },
   header: {
     alignItems: 'center',
@@ -656,6 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#007AFF',
     borderRadius: 12,
+    marginTop: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
     gap: 8,
@@ -672,20 +682,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
+  switchContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 8
+  },
+  switchLabel: {
+    margin: 8
+  }
 });
-
-{/* Nostr Public Key Input */}
-{/* <View style={styles.card}>
-  <View style={styles.cardContent}>
-    <Text style={styles.label}>Nostr Public Key</Text>
-    <TextInput
-      style={[styles.input, styles.nostrInput]}
-      value={nostrPubkey}
-      onChangeText={setNostrPubkey}
-      placeholder="npub... or hex format"
-      autoCapitalize="none"
-      autoCorrect={false}
-      editable={false}  // Add this line
-    />
-  </View>
-</View> */}
