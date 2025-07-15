@@ -1,6 +1,6 @@
 import { open } from '@op-engineering/op-sqlite';
 import { generateSHA256FromFile } from '../utils/hashUtils';
-import { base64ToUint8Array } from '../utils/base64Utils';
+import { base64ToUint8Array, Uint8ArrayToBase64 } from '../utils/base64Utils';
 import RNFS from 'react-native-fs';
 
 export class AudioStorageService {
@@ -72,16 +72,14 @@ export class AudioStorageService {
 
       console.log(`✅ Audio BINARY stored in SQLite with hash: ${hash.substring(0, 12)}...`);
 
-      // const verifyResult = this.db.execute('SELECT COUNT(*) as count FROM audio_files WHERE hash = ?', [hash]);
-      // // Immediately verify it was stored
-      // console.log('🔍 Raw verification result:', verifyResult);
-      // console.log('🔍 Verification rows:', verifyResult.rows);
-      // // console.log('🔍 Verification count:', verifyResult.rows?.[0]?.count);
-      // console.log('🔍 Verification count:', verifyResult._z?.rows?.[0]?.count);
-      const verifyResult = this.db.execute('SELECT COUNT(*) as count FROM audio_files WHERE hash = ?', [hash]);
-      console.log('🔍 Raw verification result:', verifyResult);
-      console.log('🔍 Verification rows:', verifyResult.rows);
-      console.log('🔍 Verification count:', verifyResult.rows?.[0]?.count);
+      await this.db.execute('SELECT COUNT(*) as count FROM audio_files WHERE hash = ?', [hash]).then((res) => {
+        console.log(res);
+        console.log('🔍 Rawwww verification result:', res);
+        console.log('🔍 Verificationnnn rows:', res.rows);
+        console.log('🔍 Verification count:', res.rows?.[0]?.count);
+      }).catch((err) => {
+        console.error(err)
+      }); 
 
       // Fix verification in storeAudioFile:
       return hash;
@@ -91,29 +89,50 @@ export class AudioStorageService {
     }
   }
 
-  static async getAudioByHash(hash: string): Promise<{ data: Uint8Array; metadata: any } | null> {
+  static async getAudioByHash(hash: string): Promise<{data: Uint8Array; metadata: any}|null> {
     try {
-      const result = this.db.execute(
+      const result = await this.db.execute(
         'SELECT audio_data, file_size, content_type, original_filename, created_at FROM audio_files WHERE hash = ?',
         [hash]
-      );
-      
-      const rows = result._z?.rows || [];
+      )
+      console.log('getAudioByHash result: ', result);
+      const rows = result.rows || [];
       const row = rows[0];
-      if (!row) return null;
+      console.log('getAudioByHash rows: ', rows, 'row: ', row);
+
+      if (!row) { console.log('!row'); return null; }
+
+      // Check if audio_data exists and is the right type
+      if (!row.audio_data || !(row.audio_data instanceof ArrayBuffer) && !(row.audio_data instanceof Uint8Array)) {
+        console.error('Audio data is null, undefined, or wrong type for hash:', hash);
+        return null;
+      }
+
+      // Handle both ArrayBuffer and Uint8Array cases
+      let audioData: Uint8Array;
+      if (row.audio_data instanceof ArrayBuffer) {
+        audioData = new Uint8Array(row.audio_data);
+      } else if (row.audio_data instanceof Uint8Array) {
+        audioData = row.audio_data;
+      } else {
+        audioData = new Uint8Array(row.audio_data as ArrayBuffer);
+      }
+      
+      console.log('audioData: ', audioData);
 
       return {
-        data: new Uint8Array(row.audio_data),
+        data: audioData,
         metadata: {
-          fileSize: row.file_size,
-          contentType: row.content_type,
-          originalFilename: row.original_filename,
-          createdAt: row.created_at
+          fileSize: row.file_size as number,
+          contentType: row.content_type as string,
+          originalFilename: row.original_filename as string,
+          createdAt: row.created_at as number
         }
       };
+    
     } catch (error) {
       console.error('Failed to retrieve audio:', error);
-      throw error;
+      return null;
     }
   }
 
@@ -123,13 +142,13 @@ export class AudioStorageService {
         'SELECT hash, file_size, original_filename, created_at FROM audio_files ORDER BY created_at DESC'
       );
       
-      const rows = result._z?.rows || [];
+      const rows = result.rows._array || [];
       return rows.map(row => ({
-        hash: row.hash,
+        hash: row.hash as string,
         metadata: {
-          fileSize: row.file_size,
-          originalFilename: row.original_filename,
-          createdAt: row.created_at
+          fileSize: row.file_size as number,
+          originalFilename: row.original_filename as string,
+          createdAt: row.created_at as number
         }
       }));
     } catch (error) {
@@ -139,65 +158,64 @@ export class AudioStorageService {
   }
 
   static async testBinaryRetrieval(hash: string): Promise<boolean> {
-  try {
-    console.log(`Testing binary retrieval for hash: ${hash.substring(0, 12)}...`);
-    
-    // Get binary data from SQLite
-    const audioData = await this.getAudioByHash(hash);
-    if (!audioData) {
-      console.log('❌ No data found in SQLite for this hash');
+    try {
+      console.log(`Testing binary retrieval for hash: ${hash.substring(0, 12)}...`);
+      
+      // Get binary data from SQLite
+      const audioData = await this.getAudioByHash(hash);
+      if (!audioData) {
+        console.log('❌ No data found in SQLite for this hash');
+        return false;
+      }
+      
+      console.log(`✅ Retrieved ${audioData.data.length} bytes from SQLite`);
+      console.log(`📊 Metadata:`, audioData.metadata);
+      
+      // Write SQLite data to a test file to verify it works
+      const testFilePath = RNFS.DocumentDirectoryPath + '/test_from_sqlite.m4a';
+      
+      // Convert Uint8Array back to base64 for file writing
+      let binaryString = '';
+      for (let i = 0; i < audioData.data.length; i++) {
+        binaryString += String.fromCharCode(audioData.data[i]);
+      }
+      
+      const base64Data = Uint8ArrayToBase64(audioData.data);
+      await RNFS.writeFile(testFilePath, base64Data, 'base64');
+      console.log(`✅ Test file written to: ${testFilePath}`);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Binary retrieval test failed:', error);
       return false;
     }
-    
-    console.log(`✅ Retrieved ${audioData.data.length} bytes from SQLite`);
-    console.log(`📊 Metadata:`, audioData.metadata);
-    
-    // Write SQLite data to a test file to verify it works
-    const testFilePath = RNFS.DocumentDirectoryPath + '/test_from_sqlite.m4a';
-    
-    // Convert Uint8Array back to base64 for file writing
-    let binaryString = '';
-    for (let i = 0; i < audioData.data.length; i++) {
-      binaryString += String.fromCharCode(audioData.data[i]);
-    }
-    const base64Data = btoa(binaryString);
-    
-    await RNFS.writeFile(testFilePath, base64Data, 'base64');
-    console.log(`✅ Test file written to: ${testFilePath}`);
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Binary retrieval test failed:', error);
-    return false;
-  }
   }
 
   static async debugDatabase(): Promise<void> {
     try {
       console.log('🔍 DEBUG: Checking database contents...');
       
-      // Check if table exists - fix the query result access
+      // Check if table exists
       const tableCheck = this.db.execute(`
         SELECT name FROM sqlite_master WHERE type='table' AND name='audio_files';
       `);
-      console.log('📋 Raw table check result:', tableCheck);
-      console.log('📋 Table exists rows:', tableCheck.rows);
-      
-      // Try different ways to access the data
-      if (tableCheck.rows) {
-        console.log('📋 Table rows length:', tableCheck.rows.length);
-        console.log('📋 First row:', tableCheck.rows[0]);
-      }
+
+      console.log('Debug Database Function 🔍')
+      tableCheck.then((res) => {
+        console.log('📋 Raww table check result:', res);
+        console.log('📋 Tableeee exists rows:', res.rows._array);
+      }).catch((err) => { console.error(err) });
       
       // Get all rows (without binary data)
-      const allRows = this.db.execute(`
+      this.db.execute(`
         SELECT hash, file_size, original_filename, created_at, 
               LENGTH(audio_data) as data_length 
         FROM audio_files;
-      `);
-      console.log('📊 Raw all rows result:', allRows);
-      console.log('📊 All rows:', allRows.rows);
-      
+      `).then((res) => {
+        console.log('📊 Raw all rows result:', res);
+        console.log('📊 All rows:', res.rows._array);
+      }).catch((err) => { console.error(err) });
+      console.log('END of Debug Database Function 🔍')
     } catch (error) {
       console.error('🚨 Database debug failed:', error);
     }

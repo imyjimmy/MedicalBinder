@@ -53,7 +53,7 @@ const SimpleAudioRecorderComponent: React.FC<SimpleAudioRecorderProps> = ({ onAu
       
       // Auto-run debug functions (hidden from UI)
       try {
-        await AudioStorageService.debugDatabase();
+        // await AudioStorageService.debugDatabase();
         await AudioStorageService.testBinaryRetrieval(hash);
       } catch (debugError) {
         console.error('Debug functions failed:', debugError);
