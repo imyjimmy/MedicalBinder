@@ -297,6 +297,11 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
     </View>
   );
 
+  /* audio functions */
+  const onAudioRecorded = (hash: string) => {
+    console.log('in AddRecordScreen, audio hash: ', hash);
+  }
+
   const hasContent = recordText.trim() || photos.length > 0 || pdfs.length > 0;
 
   return (
@@ -351,7 +356,7 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
 
         {/* Bottom buttons - stays at bottom */}
         <View style={styles.bottomButtonContainer}>
-          <SimpleAudioRecorderComponent /> 
+          <SimpleAudioRecorderComponent onAudioRecorded={onAudioRecorded}/> 
           <TouchableOpacity
             style={[styles.saveButton, (!hasContent || !nostrPubkey.trim() || isCommitting) && styles.saveButtonDisabled]}
             onPress={addRecord}
