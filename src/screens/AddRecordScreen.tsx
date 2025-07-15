@@ -29,6 +29,7 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   const { repoPath, repoName, token } = route.params;
   const [activeTab, setActiveTab] = useState<TabType>('text');
   const [recordText, setRecordText] = useState('');
+  const [audioHash, setAudioHash] = useState('');
   const [nostrPubkey, setNostrPubkey] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [pdfs, setPdfs] = useState<string[]>([]);
@@ -92,11 +93,12 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
         id: `record-${Date.now()}`, // Unique timestamp-based ID
         timestamp: new Date().toISOString(), // ISO timestamp for sorting/filtering
         content: recordText, // User's text content
-        photos: photos, // Array of photo attachments
-        pdfs: pdfs, // Array of PDF attachments
         author: {
           nostrPubkey: nostrPubkey // Nostr identity for verification
-        }
+        },
+        ...(audioHash && {audio: audioHash}),
+        ...(photos && { photos: photos }),
+        ...(pdfs && { pdfs: pdfs })
       };
 
       // Add new record to existing data array
@@ -300,6 +302,7 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
   /* audio functions */
   const onAudioRecorded = (hash: string) => {
     console.log('in AddRecordScreen, audio hash: ', hash);
+    setAudioHash(hash);
   }
 
   const hasContent = recordText.trim() || photos.length > 0 || pdfs.length > 0;
