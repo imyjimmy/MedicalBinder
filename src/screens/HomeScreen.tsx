@@ -87,7 +87,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     await saveClonedRepos(updatedRepos);
   };
 
-  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string) => {
+  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string, token: string) => {
     // Convert absolute path to relative path for storage
     const relativePath = PathUtils.toRelativePath(localPath);
     
@@ -95,6 +95,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
       name: name, 
       url: repoUrl, 
       path: relativePath, // Store relative path
+      token: token,
       clonedAt: new Date() 
     };
     
@@ -240,7 +241,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
             {/* <View key={index}> */}
             <View style={styles.repoInfo}>
               <Text style={styles.repoName}>{repo.name}</Text>
-              <Text style={styles.repoPath}>{repo.path}</Text>
+              <Text style={styles.repoPath}>{repo.path && (PathUtils.toAbsolutePath(repo.path))}</Text>
             </View>
             <View style={styles.binderInteractiveButtonContainer}>
               <TouchableOpacity

@@ -4,15 +4,30 @@ import { base64ToUint8Array, Uint8ArrayToBase64 } from '../utils/base64Utils';
 import RNFS from 'react-native-fs';
 
 export class AudioStorageService {
-  private static db = open({ 
-    name: 'medical_audio.db',
-    location: RNFS.DocumentDirectoryPath  // Explicitly set location
-  });
+  private static instances: Map<string, AudioStorageService> = new Map();
+  private db: any;
+  private repoName: string;
 
-  static async initialize() {
+  private constructor(repoName: string) {
+    this.repoName = repoName;
+    this.db = open({ 
+      name: `${repoName}.db`,
+      location: RNFS.DocumentDirectoryPath
+    });
+  }
+
+  static getInstance(repoName: string): AudioStorageService {
+    if (!this.instances.has(repoName)) {
+      this.instances.set(repoName, new AudioStorageService(repoName));
+    }
+    return this.instances.get(repoName)!;
+  }
+
+  async initialize(): Promise<void> {
     try {
-      const dbPath = `${RNFS.DocumentDirectoryPath}/medical_audio.db`;
+      const dbPath = `${RNFS.DocumentDirectoryPath}/${this.repoName}.db`;
       console.log('🗄️ Database should be created at:', dbPath);
+      
       // Create audio storage table with hash-based keys (BINARY STORAGE)
       this.db.execute(`
         CREATE TABLE IF NOT EXISTS audio_files (
@@ -42,7 +57,7 @@ export class AudioStorageService {
     }
   }
 
-  static async storeAudioFile(filePath: string, originalFilename?: string): Promise<string> {
+  async storeAudioFile(filePath: string, originalFilename?: string): Promise<string> {
     try {
       console.log('🎵 Starting to store audio file:', filePath);
       
@@ -81,7 +96,6 @@ export class AudioStorageService {
         console.error(err)
       }); 
 
-      // Fix verification in storeAudioFile:
       return hash;
     } catch (error) {
       console.error('❌ Failed to store audio file:', error);
@@ -89,7 +103,7 @@ export class AudioStorageService {
     }
   }
 
-  static async getAudioByHash(hash: string): Promise<{data: Uint8Array; metadata: any}|null> {
+  async getAudioByHash(hash: string): Promise<{data: Uint8Array; metadata: any}|null> {
     try {
       const result = await this.db.execute(
         'SELECT audio_data, file_size, content_type, original_filename, created_at FROM audio_files WHERE hash = ?',
@@ -136,7 +150,7 @@ export class AudioStorageService {
     }
   }
 
-  static async getAllAudioHashes(): Promise<Array<{hash: string; metadata: any}>> {
+  async getAllAudioHashes(): Promise<Array<{hash: string; metadata: any}>> {
     try {
       const result = this.db.execute(
         'SELECT hash, file_size, original_filename, created_at FROM audio_files ORDER BY created_at DESC'
@@ -157,7 +171,7 @@ export class AudioStorageService {
     }
   }
 
-  static async testBinaryRetrieval(hash: string): Promise<boolean> {
+  async testBinaryRetrieval(hash: string): Promise<boolean> {
     try {
       console.log(`Testing binary retrieval for hash: ${hash.substring(0, 12)}...`);
       
@@ -174,12 +188,6 @@ export class AudioStorageService {
       // Write SQLite data to a test file to verify it works
       const testFilePath = RNFS.DocumentDirectoryPath + '/test_from_sqlite.m4a';
       
-      // Convert Uint8Array back to base64 for file writing
-      let binaryString = '';
-      for (let i = 0; i < audioData.data.length; i++) {
-        binaryString += String.fromCharCode(audioData.data[i]);
-      }
-      
       const base64Data = Uint8ArrayToBase64(audioData.data);
       await RNFS.writeFile(testFilePath, base64Data, 'base64');
       console.log(`✅ Test file written to: ${testFilePath}`);
@@ -191,7 +199,7 @@ export class AudioStorageService {
     }
   }
 
-  static async debugDatabase(): Promise<void> {
+  async debugDatabase(): Promise<void> {
     try {
       console.log('🔍 DEBUG: Checking database contents...');
       
@@ -220,5 +228,4 @@ export class AudioStorageService {
       console.error('🚨 Database debug failed:', error);
     }
   }
-
 }

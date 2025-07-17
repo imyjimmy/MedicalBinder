@@ -6,26 +6,28 @@ const { SimpleAudioRecorder } = NativeModules;
 
 interface SimpleAudioRecorderProps {
   onAudioRecorded?: (audioHash: string) => void;
+  repoName: string;
 }
 
-const SimpleAudioRecorderComponent: React.FC<SimpleAudioRecorderProps> = ({ onAudioRecorded }) => {
+const SimpleAudioRecorderComponent: React.FC<SimpleAudioRecorderProps> = ({ onAudioRecorded, repoName }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    // Initialize audio storage on component mount
+    // Initialize audio storage on component mount using singleton
     const initializeStorage = async () => {
       try {
         console.log('🚀 Initializing AudioStorageService...');
-        await AudioStorageService.initialize();
+        const audioService = AudioStorageService.getInstance(repoName);
+        await audioService.initialize();
         console.log('✅ AudioStorageService initialized successfully');
       } catch (error) {
         console.error('❌ AudioStorageService initialization failed:', error);
       }
     };
-    
+
     initializeStorage();
-  }, []);
+  }, [repoName]);
 
   const startRecording = async () => {
     try {
@@ -47,14 +49,15 @@ const SimpleAudioRecorderComponent: React.FC<SimpleAudioRecorderProps> = ({ onAu
       setIsRecording(false);
       
       // Store in hash-based SQLite storage
-      const hash = await AudioStorageService.storeAudioFile(filePath, 'medical-recording.m4a');
+      const audioService = AudioStorageService.getInstance(repoName); // get singleton instance
+      const hash = await audioService.storeAudioFile(filePath, 'medical-recording.m4a');
       
       console.log('Recording processed:', { filePath, hash: hash.substring(0, 12) + '...' });
       
       // Auto-run debug functions (hidden from UI)
       try {
         // await AudioStorageService.debugDatabase();
-        await AudioStorageService.testBinaryRetrieval(hash);
+        await audioService.testBinaryRetrieval(hash);
       } catch (debugError) {
         console.error('Debug functions failed:', debugError);
       }

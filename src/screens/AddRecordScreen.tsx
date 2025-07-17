@@ -359,7 +359,7 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
 
         {/* Bottom buttons - stays at bottom */}
         <View style={styles.bottomButtonContainer}>
-          <SimpleAudioRecorderComponent onAudioRecorded={onAudioRecorded}/> 
+          <SimpleAudioRecorderComponent onAudioRecorded={onAudioRecorded} repoName={repoName} /> 
           <TouchableOpacity
             style={[styles.saveButton, (!hasContent || !nostrPubkey.trim() || isCommitting) && styles.saveButtonDisabled]}
             onPress={addRecord}
