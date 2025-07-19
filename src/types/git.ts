@@ -1,4 +1,5 @@
 export interface GitRepoData {
+  baseUrl: string;
   url: string;
   name: string;
   token?: string;

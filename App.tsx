@@ -27,6 +27,7 @@ export type RootStackParamList = {
     repoPath: string;
     repoName: string;
     token: string;
+    url: string;
   };
   ActiveBinder: {
     repoPath: string;
@@ -34,6 +35,7 @@ export type RootStackParamList = {
     token: string;
     sharedElementId: string;
     currentPage?: number;
+    url: string;
   };
   VideoConference: undefined;
 };

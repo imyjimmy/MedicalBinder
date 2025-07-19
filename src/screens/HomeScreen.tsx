@@ -118,7 +118,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     navigation.navigate('AddRecord', { 
       repoPath: absolutePath,
       repoName: repo.name,
-      token: repo.token ?? ''
+      token: repo.token ?? '',
+      url: repo.url,
     });
   };
 
@@ -132,6 +133,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
       repoName: repo.name,
       token: repo.token ?? '',
       sharedElementId: `binder-${index}`,
+      url: repo.url
     });
 
     // navigation.navigate('FolderScreen');

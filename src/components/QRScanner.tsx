@@ -245,7 +245,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           `💬 Message: ${cloneResult.message}`
         );
         
-        onScanSuccess?.(repoName, repoData.url, mgitLocalPath, cloneConfig.token);
+        onScanSuccess?.(repoName, repoData.baseUrl, mgitLocalPath, cloneConfig.token);
         
       } else if (cloneResult.success && !repoExists) {
         // PARTIAL SUCCESS - clone reported success but directory doesn't exist

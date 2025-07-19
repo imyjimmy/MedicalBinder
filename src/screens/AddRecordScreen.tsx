@@ -16,6 +16,8 @@ import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import { NostrAuthService } from '../services/NostrAuthService';
 import SimpleAudioRecorderComponent from '../components/SimpleAudioRecorder';
+import { AudioStorageService } from '../services/AudioStorageService';
+import { base64ToUint8Array } from '../utils/base64Utils';
 
 const MGitModule = NativeModules.MGitModule;
 
@@ -26,7 +28,7 @@ interface AddRecordScreenProps {
 type TabType = 'text' | 'photos' | 'pdfs';
 
 export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
-  const { repoPath, repoName, token } = route.params;
+  const { repoPath, repoName, token, url } = route.params;
   const [activeTab, setActiveTab] = useState<TabType>('text');
   const [recordText, setRecordText] = useState('');
   const [audioHash, setAudioHash] = useState('');
@@ -133,7 +135,7 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
         // Display success message with commit hashes for verification
         console.log('MCommit success:', commitResult);
         // Step 6: Push changes to remote repository
-        console.log('Pushing changes to remote repository...');
+        console.log('Pushing changes to remote repository.\nToken: ', token);
         const pushResult = await MGitModule.push(
           repoPath,
           token,
@@ -144,6 +146,59 @@ export const AddRecordScreen: React.FC<AddRecordScreenProps> = ({ route }) => {
           console.error('Push error details:', pushResult, 'token: ', token);
           // You might want to show a warning to the user about sync status
         }
+
+        // Step 7: Upload SQLite database to server (after successful push)
+        try {
+          console.log('Uploading SQLite database to server...');
+          
+          // Get the database file path for current repo
+          const audioService = AudioStorageService.getInstance(repoName); // TODO: Make this dynamic based on current repo
+          const dbPath = `${RNFS.DocumentDirectoryPath}/${repoName}.db`;
+          console.log('audioService: ', audioService, 'dbPath: ', dbPath);
+          // Check if database exists before uploading
+          const dbExists = await RNFS.exists(dbPath);
+          if (dbExists) {
+            console.log('db exists')
+            // Read the database file as base64, then convert to binary for upload
+            const dbDataBase64 = await RNFS.readFile(dbPath, 'base64');
+            
+            // Convert base64 to Uint8Array (works in React Native)
+            const binaryArray = base64ToUint8Array(dbDataBase64);
+            
+            console.log('🚀 Starting database upload...');
+            console.log('URL:', `${url}/api/mgit/repos/${repoName}/database`);
+            console.log('Token length:', token.length);
+            console.log('Binary array length:', binaryArray.length);
+
+            // Upload to server
+            const uploadResponse = await fetch(`${url}/api/mgit/repos/${repoName}/database`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/octet-stream'
+              },
+              body: binaryArray
+            });
+            
+            console.log('Upload response status:', uploadResponse.status);
+            console.log('Upload response headers:', uploadResponse.headers);
+
+            if (uploadResponse.ok) {
+              const result = await uploadResponse.json();
+              console.log('✅ Database uploaded successfully:', result);
+            } else {
+              const errorText = await uploadResponse.text();
+              console.warn('⚠️ Database upload failed:', errorText);
+            }
+          } else {
+            console.log('📁 No database file found to upload');
+          }
+        } catch (dbUploadError) {
+          console.error('❌ Database upload error:', dbUploadError);
+            console.error('❌ Network/fetch error:', dbUploadError.message);
+          // Don't throw - database upload failure shouldn't block the main medical record flow
+        }
+
         Alert.alert(
           'Success! 🎉',
           `Medical record added and committed!\n\nGit Hash: ${commitResult.gitHash?.substring(0, 8)}\nMGit Hash: ${commitResult.mGitHash?.substring(0, 8)}\nNostr Signed: ✓`,

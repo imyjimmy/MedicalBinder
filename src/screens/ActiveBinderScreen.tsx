@@ -34,7 +34,7 @@ interface MedicalRecord {
 const { width: screenWidth } = Dimensions.get('window');
 
 export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route }) => {
-  const { repoPath, repoName, token } = route.params;
+  const { repoPath, repoName, token, url } = route.params;
   const navigation = useNavigation<ActiveBinderNavigationProp>();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,10 +83,12 @@ export const ActiveBinderScreen: React.FC<ActiveBinderScreenProps> = ({ route })
   };
 
   const handleAddRecord = () => {
+    console.log('GOTO add record, url: ', url);
     navigation.navigate('AddRecord', { 
       repoPath,
       repoName,
-      token
+      token,
+      url
     });
   };
 

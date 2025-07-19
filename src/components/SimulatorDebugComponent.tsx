@@ -34,6 +34,7 @@ export const SimulatorDebugComponent: React.FC<SimulatorDebugComponentProps> = (
   const handleDebugClone = () => {
     const serverUrl = debugServerUrl || 'https://plebemr.com';
     const repoData: GitRepoData = {
+      baseUrl: serverUrl,
       url: `${serverUrl}/api/mgit/repos/${debugRepoName}`,
       name: debugRepoName,
       token: debugToken
