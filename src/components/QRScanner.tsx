@@ -85,6 +85,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     }
   };
 
+  const extractBaseUrl = (fullUrl: string): string => {
+    const url = new URL(fullUrl);
+    return `${url.protocol}//${url.host}`;
+  };
+
   const parseQRData = (data: string): GitRepoData | null => {
     try {
       // Try parsing as JSON first
@@ -93,6 +98,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       // Handle mgit-repo-server QR format
       if (parsed.action === 'mgit_clone' && parsed.clone_url && parsed.repo_name) {
         return {
+          baseUrl: extractBaseUrl(parsed.clone_url),
           url: parsed.clone_url,
           name: parsed.repo_name,
           token: parsed.jwt_token
@@ -107,6 +113,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       // Handle format with repoId instead of name
       if (parsed.repoId) {
         return {
+          baseUrl: extractBaseUrl(parsed.clone_url),
           url: parsed.url || `http://localhost:3003/api/mgit/repos/${parsed.repoId}`,
           name: parsed.repoId,
           token: parsed.token
@@ -119,6 +126,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
         if (match) {
           const repoId = match[1];
           return {
+            baseUrl: extractBaseUrl(data),
             url: data,
             name: repoId,
           };
@@ -128,7 +136,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       // Check for direct git URLs
       if (data.includes('github.com') || data.includes('gitlab.com') || data.includes('.git')) {
         const name = data.split('/').pop()?.replace('.git', '') || 'repo';
-        return { url: data, name };
+        return { baseUrl: extractBaseUrl(data), url: data, name };
       }
     }
     return null;
@@ -156,6 +164,42 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     );
 
     executeClone(repoData, localPath, options);
+  };
+
+  const downloadDatabase = async (repoName: string, baseUrl: string, token: string, localPath: string): Promise<void> => {
+    const databaseUrl = `${baseUrl}/api/mgit/repos/${repoName}/database`;
+    
+    const response = await fetch(databaseUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Database download failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const databasePath = `${localPath}/medical-records.db`;
+    const databaseBlob = await response.blob();
+    
+    // Convert blob to base64 and save using RNFS
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const result = reader.result as string;          
+          const base64Data = result.split(',')[1];
+          await RNFS.writeFile(databasePath, base64Data, 'base64');
+          console.log('✅ Database downloaded successfully to:', databasePath);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read database blob'));
+      reader.readAsDataURL(databaseBlob);
+    });
   };
 
   const executeClone = async (repoData: GitRepoData, localPath: string, options: any) => {
@@ -244,7 +288,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           `🔗 Source: ${cloneConfig.url}\n` +
           `💬 Message: ${cloneResult.message}`
         );
-        
+    
+        await downloadDatabase(repoName, repoData.baseUrl, cloneConfig.token, mgitLocalPath)
+
         onScanSuccess?.(repoName, repoData.baseUrl, mgitLocalPath, cloneConfig.token);
         
       } else if (cloneResult.success && !repoExists) {
