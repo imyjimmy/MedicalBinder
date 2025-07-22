@@ -180,7 +180,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       throw new Error(`Database download failed: ${response.status} ${response.statusText}`);
     }
     
-    const databasePath = `${localPath}/medical-records.db`;
+    const databasePath = `${localPath}/../${repoName}.db`;
     const databaseBlob = await response.blob();
     
     // Convert blob to base64 and save using RNFS
