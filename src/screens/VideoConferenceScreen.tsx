@@ -8,7 +8,9 @@ import {
   Alert,
 } from 'react-native';
 import {
+  RTCPeerConnection,
   RTCView,
+  mediaDevices,
   MediaStream,
 } from 'react-native-webrtc';
 import { useNavigation } from '@react-navigation/native';
@@ -52,6 +54,24 @@ export const VideoConferenceScreen: React.FC = () => {
       Alert.alert('Error', 'Failed to initialize video call');
       navigation.goBack();
     }
+
+    const stream = await mediaDevices.getUserMedia({video: true, audio: true});
+    console.log('stream: ', stream);
+    setLocalStream(stream);
+
+    console.log('localStream exists:', !!stream);
+    console.log('localStream URL:', stream?.toURL());
+    console.log('Stream tracks:', stream.getTracks().map(t => t.kind)); // Should show ['video', 'audio']
+
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' }, // Free Google STUN
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    });
+
+    console.log('peerConnection: ', peerConnection);
+    peerConnection.addStream(stream);
   };
 
   const toggleAudio = () => {
@@ -93,6 +113,7 @@ export const VideoConferenceScreen: React.FC = () => {
               style={styles.remoteVideo}
               objectFit="cover"
             />
+            {/* <RTCView streamURL={remoteStream.toURL()} style={{width: 200, height: 200}} /> */}
             <View style={styles.remoteLabel}>
               <Text style={styles.remoteLabelText}>Dr. Smith</Text>
             </View>
@@ -112,12 +133,14 @@ export const VideoConferenceScreen: React.FC = () => {
       {/* Local Video (Patient) */}
       <View style={styles.localVideoContainer}>
         {localStream && (
+          <>
           <RTCView 
             streamURL={localStream.toURL()} 
             style={styles.localVideo}
             objectFit="cover"
             mirror={true}
           />
+          </>
         )}
         <View style={styles.localLabel}>
           <Text style={styles.localLabelText}>You</Text>
@@ -150,6 +173,17 @@ export const VideoConferenceScreen: React.FC = () => {
         >
           <Text style={styles.controlButtonText}>📞</Text>
         </TouchableOpacity>
+      </View>
+      <View style={{position: 'absolute', top: 40, left: 20, zIndex: 999}}>
+        <Text style={{color: 'white', backgroundColor: 'red', padding: 5}}>
+          Local Stream: {localStream ? 'EXISTS' : 'NONE'}
+        </Text>
+        <Text style={{color: 'white', backgroundColor: 'red', padding: 5}}>
+          Stream URL: {localStream?.toURL().substring(0, 8)}...
+        </Text>
+        <Text style={{color: 'white', backgroundColor: 'red', padding: 5}}>
+          Active: {localStream?.active ? 'YES' : 'NO'}
+        </Text>
       </View>
     </SafeAreaView>
   );

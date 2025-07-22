@@ -192,7 +192,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Main Content Area */}
-      {/* Telehealth Appointment Rectangle -- @todo
+      {/* Telehealth Appointment Rectangle -- @todo  */}
       <View style={styles.telehealthContainer}>
         <TouchableOpacity
           style={styles.telehealthRectangle}
@@ -213,7 +213,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
             </View>
           </View>
         </TouchableOpacity> 
-      </View> */}
+      </View>
       {/* <SQLiteTest /> */}
       {/* <AudioRecorderTest /> */}
       <View style={styles.binderContainer}>
