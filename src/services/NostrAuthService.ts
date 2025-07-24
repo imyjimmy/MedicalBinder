@@ -4,23 +4,10 @@ import {
   StoredNostrCredentials,
   NostrProfile
 } from '../types/nostr';
-
+import { bytesToHex, hexToBytes } from '../utils/bytesHexUtils';
 import CryptoJS from 'crypto-js';
 import { bech32 } from 'bech32';
 import * as secp256k1 from '@noble/secp256k1';
-
-// Helper functions - defined outside the class to avoid method resolution issues
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-}
 
 function decodeBech32(bech32String: string): string {
   try {

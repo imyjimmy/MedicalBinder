@@ -37,7 +37,10 @@ export type RootStackParamList = {
     currentPage?: number;
     url: string;
   };
-  VideoConference: undefined;
+  VideoConference: {
+    baseUrl: string;
+    token: string;
+  };
 };
 
 const Stack = createSharedElementStackNavigator<RootStackParamList>();

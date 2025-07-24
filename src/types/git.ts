@@ -6,6 +6,7 @@ export interface GitRepoData {
 }
 
 export interface ClonedRepo {
+  baseUrl: string;
   url: string;
   path: string;
   name: string;
@@ -13,4 +14,4 @@ export interface ClonedRepo {
   token: string;
 }
 
-export type ScanSuccessCallback = (name: string, repoUrl: string, localPath: string, token: string) => void;
+export type ScanSuccessCallback = (name: string, baseUrl: string, url: string, localPath: string, token: string) => void;

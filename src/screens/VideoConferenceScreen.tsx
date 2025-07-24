@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { RouteProp } from '@react-navigation/native';
 import {
   RTCPeerConnection,
   RTCView,
@@ -15,8 +16,15 @@ import {
 } from 'react-native-webrtc';
 import { useNavigation } from '@react-navigation/native';
 import WebRTCService from '../services/WebRTCService';
+import type { RootStackParamList } from '../../App';
 
-export const VideoConferenceScreen: React.FC = () => {
+interface VideoConferenceScreenProps {
+  route: RouteProp<RootStackParamList, 'VideoConference'>;
+}
+
+export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({route}) => {
+  const { baseUrl, token } = route.params;
+  const SIGNALING_URL = `${baseUrl}/api/webrtc`;
   const navigation = useNavigation();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -72,6 +80,20 @@ export const VideoConferenceScreen: React.FC = () => {
 
     console.log('peerConnection: ', peerConnection);
     peerConnection.addStream(stream);
+  };
+
+  // Join a room
+  const joinRoom = async (roomId: string) => {
+    const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/join`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${yourJWTToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await response.json();
+    console.log('Joined room:', result);
   };
 
   const toggleAudio = () => {

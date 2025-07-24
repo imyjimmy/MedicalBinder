@@ -291,7 +291,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     
         await downloadDatabase(repoName, repoData.baseUrl, cloneConfig.token, mgitLocalPath)
 
-        onScanSuccess?.(repoName, repoData.baseUrl, mgitLocalPath, cloneConfig.token);
+        onScanSuccess?.(repoName, repoData.baseUrl, repoData.url, mgitLocalPath, cloneConfig.token);
         
       } else if (cloneResult.success && !repoExists) {
         // PARTIAL SUCCESS - clone reported success but directory doesn't exist
@@ -373,7 +373,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
       if (!isScanning || codes.length === 0) return;
       
       setIsScanning(false);
-      const qrData = codes[0].value;
+      const qrData = codes[0].value || '';
       
       const repoData = parseQRData(qrData);
       if (repoData) {

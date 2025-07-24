@@ -1,24 +1,26 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
   SafeAreaView,
-  Image,
+  // Image,
 } from 'react-native';
 import { QRScanner } from '../components/QRScanner';
 import { ClonedRepo, ScanSuccessCallback } from '../types/git';
-import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 import { SharedElement } from 'react-native-shared-element';
 import { useNavigation } from '@react-navigation/native';
 import { PathUtils } from '../utils/pathUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import SQLiteTest from '../components/SQLiteTest';
-// import AudioRecorderTest from '../components/AudioRecorderTest';
+import BackgroundAuthService from '../services/BackgroundAuthService';
+// import SQLiteTest from '../components/SQLiteTest';
+// // import AudioRecorderTest from '../components/AudioRecorderTest';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -39,8 +41,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     loadClonedRepos();
   }, []);
 
-  const handleTelehealthPress = () => {
-    navigation.navigate('VideoConference');
+  const handleTelehealthPress = async (baseUrl: string) => {
+    try {
+      const jwtToken = await BackgroundAuthService.getOrCreateJWT(baseUrl);
+      if (jwtToken) {
+        navigation.navigate('VideoConference', { baseUrl: baseUrl, token: jwtToken });
+      } else {
+        Alert.alert('Authentication Error', 'Could not authenticate for video call');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to prepare video call');
+      console.error('Telehealth auth error:', error);
+    }
   };
 
   const sortedRepos = useMemo(() => {
@@ -87,13 +99,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
     await saveClonedRepos(updatedRepos);
   };
 
-  const handleScanSuccess: ScanSuccessCallback = async (name: string, repoUrl: string, localPath: string, token: string) => {
+  const handleScanSuccess: ScanSuccessCallback = async (name: string, baseUrl: string, url: string, localPath: string, token: string) => {
     // Convert absolute path to relative path for storage
     const relativePath = PathUtils.toRelativePath(localPath);
     
     const newRepo = { 
       name: name, 
-      url: repoUrl, 
+      baseUrl: baseUrl, // this is the base url
+      url: url,
       path: relativePath, // Store relative path
       token: token,
       clonedAt: new Date() 
@@ -196,7 +209,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, route }) => {
       <View style={styles.telehealthContainer}>
         <TouchableOpacity
           style={styles.telehealthRectangle}
-          onPress={handleTelehealthPress}
+          onPress={() => handleTelehealthPress('https://plebemr.com')}
           activeOpacity={0.8}
         >
           <View style={styles.telehealthContent}>
