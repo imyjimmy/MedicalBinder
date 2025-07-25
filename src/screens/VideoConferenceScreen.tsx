@@ -16,6 +16,7 @@ import {
 } from 'react-native-webrtc';
 import { useNavigation } from '@react-navigation/native';
 import WebRTCService from '../services/WebRTCService';
+import { RTCSessionDescription } from 'react-native-webrtc';
 import type { RootStackParamList } from '../../App';
 
 interface VideoConferenceScreenProps {
@@ -31,6 +32,7 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [connectionState, setConnectionState] = useState('connecting');
+  // const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
   const [isWaitingForDoctor, setIsWaitingForDoctor] = useState(true);
 
   useEffect(() => {
@@ -80,20 +82,85 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
 
     console.log('peerConnection: ', peerConnection);
     peerConnection.addStream(stream);
+    // setPeerConnection(peerConnection);
+
+    // Add this: Join the hardcoded test room
+    const roomId = 'bright-dolphin-swimming';
+    await joinRoom(roomId, token, peerConnection);
   };
 
-  // Join a room
-  const joinRoom = async (roomId: string) => {
-    const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/join`, {
+  const joinRoom = async (roomId: string, jwtToken: string, peerConnection: RTCPeerConnection) => {
+    try {
+      // Step 1: Join the room
+      console.log(`about to join room by hitting endpoint: ${SIGNALING_URL}/rooms/${roomId}/join with jwt: ${jwtToken}`);
+
+      const joinResponse = await fetch(`${SIGNALING_URL}/rooms/${roomId}/join`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const joinResult = await joinResponse.json();
+      console.log('Joined room:', joinResult);
+      
+      // Step 2: Start WebRTC offer/answer exchange
+      await startSignalingLoop(roomId, jwtToken, peerConnection);
+      
+    } catch (error) {
+      console.error('Failed to join room:', error);
+    }
+  };
+
+  const startSignalingLoop = async (roomId: string, jwtToken: string, peerConnection: RTCPeerConnection) => {
+    if (!peerConnection) {
+      console.error('No peer connection available');
+      return;
+    }
+
+    console.log('=== CLIENT: Starting signaling loop ===');
+    // Create offer and send it
+    const offer = await peerConnection.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true
+    });
+    await peerConnection!.setLocalDescription(offer as RTCSessionDescription);
+    console.log('CLIENT: Created and set local offer');
+
+    // Send offer to server
+    const offerResponse = await fetch(`${SIGNALING_URL}/rooms/${roomId}/offer`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${yourJWTToken}`,
+        'Authorization': `Bearer ${jwtToken}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({ offer })
     });
     
-    const result = await response.json();
-    console.log('Joined room:', result);
+    console.log('CLIENT: Sent offer to server, response:', offerResponse.status);
+  
+    // Poll for answer
+    console.log('CLIENT: Starting to poll for answer...');
+    
+    // Poll for answer (simple approach)
+    const pollForAnswer = setInterval(async () => {
+      try {
+        const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/answer`, {
+          headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        
+        const { answer } = await response.json();
+        
+        if (answer) {
+          clearInterval(pollForAnswer);
+          await peerConnection.setRemoteDescription(answer.answer);
+          console.log('Answer received and set!');
+        }
+      } catch (error) {
+        console.error('Error polling for answer:', error);
+      }
+    }, 2000); // Poll every 2 seconds
   };
 
   const toggleAudio = () => {

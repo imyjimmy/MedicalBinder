@@ -4,8 +4,40 @@ import * as secp256k1 from '@noble/secp256k1';
 import CryptoJS from 'crypto-js';
 import { bytesToHex, hexToBytes } from '../utils/bytesHexUtils';
 import { finalizeEvent } from 'nostr-tools/pure';
+import { base64UrlDecode } from '../utils/base64Utils';
 
 class BackgroundAuthService {
+  /**
+   * Check if JWT token is expired
+   */
+  static isTokenExpired(token: string): boolean {
+    try {
+      // JWT format: header.payload.signature
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+      
+      // Decode the payload (base64url)
+      const decodedPayload = base64UrlDecode(parts[1])
+      const payloadObj = JSON.parse(decodedPayload);
+      
+      // Check expiration (exp is in seconds, Date.now() is in milliseconds)
+      if (!payloadObj.exp) return true;
+      
+      const currentTime = Math.floor(Date.now() / 1000);
+      const isExpired = currentTime >= payloadObj.exp;
+      
+      console.log(`Token expires at: ${new Date(payloadObj.exp * 1000).toISOString()}`);
+      console.log(`Current time: ${new Date().toISOString()}`);
+      console.log(`Token expired: ${isExpired}`);
+      
+      return isExpired;
+      
+    } catch (error) {
+      console.error('Error checking token expiration:', error);
+      return true; // Assume expired if we can't parse it
+    }
+  }
+
   /**
    * Sign a challenge using Nostr event format (matching nos2x)
    */
@@ -99,12 +131,19 @@ class BackgroundAuthService {
       const cachedToken = await KeychainService.getServerToken();
       
       if (cachedToken) {
-        // TODO: Add JWT expiration check here if needed
-        console.log('Using cached JWT token');
-        return cachedToken;
+        // Check if token is expired
+        if (!this.isTokenExpired(cachedToken)) {
+          console.log('Using cached JWT token (still valid)');
+          return cachedToken;
+        } else {
+          console.log('Cached JWT token expired, getting new one');
+          // Clear expired token
+          await KeychainService.deleteServerToken();
+        }
       }
       
       // Get new token and cache it
+      console.log('Authenticating for new JWT token...');
       const newToken = await this.getGeneralJWT(baseUrl);
       
       if (newToken) {

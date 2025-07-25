@@ -53,3 +53,16 @@ export const Uint8ArrayToBase64 = (uint8Array: Uint8Array): string => {
   
   return result;
 }
+
+export const base64UrlDecode = (str: string): string => {
+  // Convert base64url to base64
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  
+  // Add padding if needed
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  
+  // Use Buffer (available in React Native)
+  return Buffer.from(base64, 'base64').toString('utf8');
+}
