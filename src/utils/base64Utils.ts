@@ -63,6 +63,14 @@ export const base64UrlDecode = (str: string): string => {
     base64 += '=';
   }
   
-  // Use Buffer (available in React Native)
-  return Buffer.from(base64, 'base64').toString('utf8');
+  // Use your existing base64ToUint8Array then convert to string
+  const uint8Array = base64ToUint8Array(base64);
+  
+  // Convert Uint8Array to string
+  let result = '';
+  for (let i = 0; i < uint8Array.length; i++) {
+    result += String.fromCharCode(uint8Array[i]);
+  }
+  
+  return result;
 }

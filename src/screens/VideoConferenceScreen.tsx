@@ -32,7 +32,8 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [connectionState, setConnectionState] = useState('connecting');
-  // const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+  const [roomId, setRoomId] = useState<string>('bright-dolphin-swimming');
+  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
   const [isWaitingForDoctor, setIsWaitingForDoctor] = useState(true);
 
   useEffect(() => {
@@ -82,10 +83,8 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
 
     console.log('peerConnection: ', peerConnection);
     peerConnection.addStream(stream);
-    // setPeerConnection(peerConnection);
+    setPeerConnection(peerConnection);
 
-    // Add this: Join the hardcoded test room
-    const roomId = 'bright-dolphin-swimming';
     await joinRoom(roomId, token, peerConnection);
   };
 
@@ -119,6 +118,37 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
       return;
     }
 
+    let remoteDescriptionSet = false;
+    let pendingIceCandidates: any = [];
+
+    // Handle ICE candidates (React Native WebRTC way)
+    peerConnection.addEventListener('icecandidate', async (event: any) => {
+      if (event.candidate) {
+        console.log('CLIENT: Sending ICE candidate');
+        try {
+          await fetch(`${SIGNALING_URL}/rooms/${roomId}/ice-candidate`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${jwtToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ candidate: event.candidate })
+          });
+        } catch (error) {
+          console.error('CLIENT: Error sending ICE candidate:', error);
+        }
+      }
+    });
+
+    // Handle remote stream (React Native WebRTC way)
+    peerConnection.addEventListener('addstream', (event: any) => {
+      console.log('CLIENT: Received remote stream!');
+      if (event.stream) {
+        setRemoteStream(event.stream);
+        console.log('CLIENT: ✅ Remote stream set!');
+      }
+    });
+
     console.log('=== CLIENT: Starting signaling loop ===');
     // Create offer and send it
     const offer = await peerConnection.createOffer({
@@ -149,18 +179,61 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
         const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/answer`, {
           headers: { 'Authorization': `Bearer ${jwtToken}` }
         });
-        
+
         const { answer } = await response.json();
         
-        if (answer) {
+        if (answer && answer.answer) {
           clearInterval(pollForAnswer);
+          clearInterval(pollForIceCandidates);
           await peerConnection.setRemoteDescription(answer.answer);
-          console.log('Answer received and set!');
+          console.log('CLIENT: ✅ Answer received and set! Connection should be established.');
+          // NOW it's safe to add ICE candidates
+          remoteDescriptionSet = true;
+
+            // Add any pending ICE candidates
+          for (const candidate of pendingIceCandidates) {
+            try {
+              await peerConnection.addIceCandidate(candidate);
+              console.log('CLIENT: Added pending ICE candidate');
+            } catch (error) {
+              console.error('CLIENT: Error adding pending ICE candidate:', error);
+            }
+          }
+          pendingIceCandidates = []; // Clear the queue
         }
       } catch (error) {
         console.error('Error polling for answer:', error);
       }
     }, 2000); // Poll every 2 seconds
+
+    // Poll for remote ICE candidates
+    const pollForIceCandidates = setInterval(async () => {
+      console.log('poll for Ice Candidates');
+      try {
+        const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/ice-candidates`, {
+          headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+
+        console.log('CLIENT: ICE candidates response status:', response.status);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('CLIENT: ICE candidates error:', response.status, errorText);
+          return;
+        }
+
+        const { candidates } = await response.json();
+
+        if (candidates && candidates.length > 0) {
+          console.log(`CLIENT: Received ${candidates.length} ICE candidates`);
+          for (const candidateData of candidates) {
+            console.log('CLIENT: Adding remote ICE candidate');
+            await peerConnection.addIceCandidate(candidateData.candidate);
+          }
+        }
+      } catch (error) {
+        console.error('CLIENT: Error handling ICE candidates:', error);
+      }
+    }, 2000);
   };
 
   const toggleAudio = () => {
@@ -173,18 +246,57 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
     setIsVideoEnabled(enabled);
   };
 
-  const endCall = () => {
+  // const endCall = () => {
+  //   Alert.alert(
+  //     'End Call',
+  //     'Are you sure you want to end the call?',
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       {
+  //         text: 'End Call',
+  //         style: 'destructive',
+  //         onPress: () => {
+  //           WebRTCService.endCall();
+  //           navigation.goBack();
+  //         },
+  //       },
+  //     ]
+  //   );
+  // };
+
+  const leaveCall = async () => {
     Alert.alert(
-      'End Call',
-      'Are you sure you want to end the call?',
+      'Leave Call',
+      'Are you sure you want to leave the call?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'End Call',
+          text: 'Leave Call',
           style: 'destructive',
-          onPress: () => {
-            WebRTCService.endCall();
-            navigation.goBack();
+          onPress: async () => {
+            try {
+              // Call leave endpoint
+              await fetch(`${SIGNALING_URL}/rooms/${roomId}/leave`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              // Close peer connection
+              peerConnection?.close();
+              
+              // Stop local stream
+              localStream?.getTracks().forEach(track => track.stop());
+              
+              // Navigate back
+              navigation.goBack();
+              
+            } catch (error) {
+              console.error('Error leaving room:', error);
+              navigation.goBack(); // Still go back even if API call fails
+            }
           },
         },
       ]
@@ -258,7 +370,7 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
 
         <TouchableOpacity
           style={[styles.controlButton, styles.endCallButton]}
-          onPress={endCall}
+          onPress={leaveCall}
         >
           <Text style={styles.controlButtonText}>📞</Text>
         </TouchableOpacity>

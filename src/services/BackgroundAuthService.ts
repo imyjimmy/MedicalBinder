@@ -16,8 +16,8 @@ class BackgroundAuthService {
       const parts = token.split('.');
       if (parts.length !== 3) return true;
       
-      // Decode the payload (base64url)
-      const decodedPayload = base64UrlDecode(parts[1])
+      // Decode the payload using your existing utility
+      const decodedPayload = base64UrlDecode(parts[1]);
       const payloadObj = JSON.parse(decodedPayload);
       
       // Check expiration (exp is in seconds, Date.now() is in milliseconds)
@@ -35,6 +35,26 @@ class BackgroundAuthService {
     } catch (error) {
       console.error('Error checking token expiration:', error);
       return true; // Assume expired if we can't parse it
+    }
+  }
+
+  /**
+   * Debug JWT token info
+   */
+  static debugToken(token: string): void {
+    try {
+      const parts = token.split('.');
+      const decodedPayload = base64UrlDecode(parts[1]);
+      const payloadObj = JSON.parse(decodedPayload);
+      
+      console.log('JWT Debug Info:');
+      console.log('- Issued at:', new Date(payloadObj.iat * 1000).toISOString());
+      console.log('- Expires at:', new Date(payloadObj.exp * 1000).toISOString());
+      console.log('- Pubkey:', payloadObj.pubkey?.substring(0, 16) + '...');
+      console.log('- Time until expiry:', Math.floor((payloadObj.exp * 1000 - Date.now()) / 1000 / 60), 'minutes');
+      
+    } catch (error) {
+      console.error('Error debugging token:', error);
     }
   }
 
@@ -127,20 +147,20 @@ class BackgroundAuthService {
    */
   static async getOrCreateJWT(baseUrl: string): Promise<string | null> {
     try {
-      // Try to get cached token first
-      const cachedToken = await KeychainService.getServerToken();
+      // // Try to get cached token first
+      // const cachedToken = await KeychainService.getServerToken();
       
-      if (cachedToken) {
-        // Check if token is expired
-        if (!this.isTokenExpired(cachedToken)) {
-          console.log('Using cached JWT token (still valid)');
-          return cachedToken;
-        } else {
-          console.log('Cached JWT token expired, getting new one');
-          // Clear expired token
-          await KeychainService.deleteServerToken();
-        }
-      }
+      // if (cachedToken) {
+      //   // Check if token is expired
+      //   if (!this.isTokenExpired(cachedToken)) {
+      //     console.log('Using cached JWT token (still valid)');
+      //     return cachedToken;
+      //   } else {
+      //     console.log('Cached JWT token expired, getting new one');
+      //     // Clear expired token
+      //     await KeychainService.deleteServerToken();
+      //   }
+      // }
       
       // Get new token and cache it
       console.log('Authenticating for new JWT token...');
