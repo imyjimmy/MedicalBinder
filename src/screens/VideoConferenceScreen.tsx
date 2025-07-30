@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -35,13 +35,101 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
   const [roomId, setRoomId] = useState<string>('bright-dolphin-swimming');
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
   const [isWaitingForDoctor, setIsWaitingForDoctor] = useState(true);
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [pollForAnswerInterval, setPollForAnswerInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollForIceCandidatesInterval, setPollForIceCandidatesInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     initializeCall();
     return () => {
+      console.log('=== COMPONENT UNMOUNTING - CLEANUP ===');
+      // Clear polling intervals
+      if (pollForAnswerInterval) {
+        clearInterval(pollForAnswerInterval);
+        console.log('Cleanup: Cleared answer polling interval');
+      }
+      if (pollForIceCandidatesInterval) {
+        clearInterval(pollForIceCandidatesInterval);
+        console.log('Cleanup: Cleared ICE candidates polling interval');
+      }
+      
+      // Stop all tracks
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          track.stop();
+          console.log(`Cleanup: Stopped ${track.kind} track`);
+        });
+      }
+      
+      // Close peer connection
+      if (peerConnection) {
+        peerConnection.close();
+        console.log('Cleanup: Closed peer connection');
+      }
+      
       WebRTCService.endCall();
+      console.log('=== COMPONENT CLEANUP COMPLETED ===');
     };
   }, []);
+
+  // useEffect(() => {
+  //   console.log('=== isInRoom CHANGED ===', isInRoom);
+    
+  //   if (!isInRoom) {
+  //     console.log('isInRoom is false - clearing polling intervals');
+      
+  //     // Clear answer polling interval
+  //     if (pollForAnswerInterval) {
+  //       clearInterval(pollForAnswerInterval);
+  //       setPollForAnswerInterval(null);
+  //       console.log('Cleared answer polling interval via useEffect');
+  //     }
+      
+  //     // Clear ICE candidates polling interval
+  //     if (pollForIceCandidatesInterval) {
+  //       clearInterval(pollForIceCandidatesInterval);
+  //       setPollForIceCandidatesInterval(null);
+  //       console.log('Cleared ICE candidates polling interval via useEffect');
+  //     }
+  //   }
+  // }, [isInRoom, pollForAnswerInterval, pollForIceCandidatesInterval]);
+
+  const cleanupWebRTCState = useCallback(() => {
+    console.log('🧹 CLEANUP: Starting WebRTC state cleanup');
+    
+    // Clear intervals
+    if (pollForAnswerInterval) {
+      clearInterval(pollForAnswerInterval);
+      setPollForAnswerInterval(null);
+      console.log('🧹 CLEANUP: Cleared answer polling interval');
+    }
+    if (pollForIceCandidatesInterval) {
+      clearInterval(pollForIceCandidatesInterval);
+      setPollForIceCandidatesInterval(null);
+      console.log('🧹 CLEANUP: Cleared ICE candidates polling interval');
+    }
+    
+    // Stop local stream tracks
+    if (localStream) {
+      localStream.getTracks().forEach((track, index) => {
+        console.log(`🧹 CLEANUP: Stopping track ${index}: ${track.kind}`);
+        track.stop();
+      });
+    }
+    
+    // Clean up peer connection
+    if (peerConnection && peerConnection.connectionState !== 'closed') {
+      console.log('🧹 CLEANUP: Closing peer connection');
+      peerConnection.close();
+    }
+    
+    // Reset UI state
+    setRemoteStream(null);
+    setConnectionState('disconnected');
+    setIsWaitingForDoctor(true);
+    
+    console.log('🧹 CLEANUP: WebRTC state cleanup completed');
+  }, [pollForAnswerInterval, pollForIceCandidatesInterval, peerConnection, localStream]);
 
   const initializeCall = async () => {
     WebRTCService.setCallbacks({
@@ -104,9 +192,36 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
       const joinResult = await joinResponse.json();
       console.log('Joined room:', joinResult);
       
-      // Step 2: Start WebRTC offer/answer exchange
-      await startSignalingLoop(roomId, jwtToken, peerConnection);
+      // 🔧 NEW: Handle rejoin scenario
+      if (joinResult.status === 'rejoined' || joinResult.isRejoin) {
+        console.log('🔄 CLIENT: Detected rejoin - resetting WebRTC state');
+        
+        cleanupWebRTCState();
+
+        // Create fresh peer connection
+        const freshPeerConnection = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        });
+        
+        // Add local stream to fresh connection
+        if (localStream) {
+          freshPeerConnection.addStream(localStream);
+          console.log('CLIENT: Added local stream to fresh peer connection');
+        }
+          
+        setPeerConnection(freshPeerConnection);
+        console.log('CLIENT: ✅ Fresh peer connection created for rejoin');
+        
+        // Use the fresh connection for signaling
+        await startSignalingLoop(roomId, jwtToken, freshPeerConnection);
+        return;
+      }
       
+      // Step 2: Start WebRTC offer/answer exchange (normal join path)
+      await startSignalingLoop(roomId, jwtToken, peerConnection);
     } catch (error) {
       console.error('Failed to join room:', error);
     }
@@ -118,10 +233,35 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
       return;
     }
 
+    console.log('=== CLIENT: Setting isInRoom to true ===');
+    // setIsInRoom(true);
+
     let remoteDescriptionSet = false;
     let pendingIceCandidates: any = [];
 
     // Handle ICE candidates (React Native WebRTC way)
+    // peerConnection.addEventListener('icecandidate', async (event: any) => {
+    //   console.log('🧊 CLIENT: ICE candidate event fired, candidate:', !!event.candidate, 'isInRoom:', isInRoom);
+    //   if (event.candidate && isInRoom) {
+    //     console.log('🧊 CLIENT: Sending ICE candidate to server');
+    //     try {
+    //       const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/ice-candidate`, {
+    //         method: 'POST',
+    //         headers: {
+    //           'Authorization': `Bearer ${jwtToken}`,
+    //           'Content-Type': 'application/json'
+    //         },
+    //         body: JSON.stringify({ candidate: event.candidate })
+    //       });
+    //       console.log('🧊 CLIENT: ICE candidate sent, response:', response.status);
+    //     } catch (error) {
+    //       console.error('CLIENT: Error sending ICE candidate:', error);
+    //     }
+    //   } else if (event.candidate && !isInRoom) {
+    //     console.log('🚫 CLIENT: ICE candidate generated but isInRoom=false, not sending');
+    //   }
+    // });
+
     peerConnection.addEventListener('icecandidate', async (event: any) => {
       if (event.candidate) {
         console.log('CLIENT: Sending ICE candidate');
@@ -169,12 +309,14 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
     });
     
     console.log('CLIENT: Sent offer to server, response:', offerResponse.status);
-  
+
     // Poll for answer
     console.log('CLIENT: Starting to poll for answer...');
     
-    // Poll for answer (simple approach)
-    const pollForAnswer = setInterval(async () => {
+    // Poll for answer with cleanup
+    const answerInterval = setInterval(async () => {
+      console.log('CLIENT: answerInterval poll');
+
       try {
         const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/answer`, {
           headers: { 'Authorization': `Bearer ${jwtToken}` }
@@ -183,20 +325,24 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
         const { answer } = await response.json();
         
         if (answer && answer.answer) {
-          clearInterval(pollForAnswer);
-          clearInterval(pollForIceCandidates);
+          console.log('CLIENT: Clearing answer polling interval');
+          clearInterval(answerInterval);
+          clearInterval(iceCandidatesInterval);
+          setPollForAnswerInterval(null);
+          setPollForIceCandidatesInterval(null);
+
           await peerConnection.setRemoteDescription(answer.answer);
-          console.log('CLIENT: ✅ Answer received and set! Connection should be established.');
-          // NOW it's safe to add ICE candidates
+          console.log('CLIENT: ✅ Answer received and set!');
           remoteDescriptionSet = true;
 
-            // Add any pending ICE candidates
+          // ✅ Process queued ICE candidates
+          console.log(`CLIENT: Processing ${pendingIceCandidates.length} queued ICE candidates`);
           for (const candidate of pendingIceCandidates) {
             try {
               await peerConnection.addIceCandidate(candidate);
-              console.log('CLIENT: Added pending ICE candidate');
+              console.log('CLIENT: Added queued ICE candidate');
             } catch (error) {
-              console.error('CLIENT: Error adding pending ICE candidate:', error);
+              console.error('CLIENT: Error adding queued ICE candidate:', error);
             }
           }
           pendingIceCandidates = []; // Clear the queue
@@ -204,10 +350,13 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
       } catch (error) {
         console.error('Error polling for answer:', error);
       }
-    }, 2000); // Poll every 2 seconds
+    }, 2000);
 
-    // Poll for remote ICE candidates
-    const pollForIceCandidates = setInterval(async () => {
+    // Store interval reference
+    setPollForAnswerInterval(answerInterval);
+
+    // Poll for remote ICE candidates with cleanup
+    const iceCandidatesInterval = setInterval(async () => {
       console.log('poll for Ice Candidates');
       try {
         const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/ice-candidates`, {
@@ -226,14 +375,22 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
         if (candidates && candidates.length > 0) {
           console.log(`CLIENT: Received ${candidates.length} ICE candidates`);
           for (const candidateData of candidates) {
-            console.log('CLIENT: Adding remote ICE candidate');
-            await peerConnection.addIceCandidate(candidateData.candidate);
+            if (remoteDescriptionSet) {
+              console.log('CLIENT: Adding remote ICE candidate immediately');
+              await peerConnection.addIceCandidate(candidateData.candidate);
+            } else {
+              console.log('CLIENT: Queueing ICE candidate (no remote description yet)');
+              pendingIceCandidates.push(candidateData.candidate);
+            }
           }
         }
       } catch (error) {
         console.error('CLIENT: Error handling ICE candidates:', error);
       }
     }, 2000);
+
+    // Store interval reference
+    setPollForIceCandidatesInterval(iceCandidatesInterval);
   };
 
   const toggleAudio = () => {
@@ -246,25 +403,17 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
     setIsVideoEnabled(enabled);
   };
 
-  // const endCall = () => {
-  //   Alert.alert(
-  //     'End Call',
-  //     'Are you sure you want to end the call?',
-  //     [
-  //       { text: 'Cancel', style: 'cancel' },
-  //       {
-  //         text: 'End Call',
-  //         style: 'destructive',
-  //         onPress: () => {
-  //           WebRTCService.endCall();
-  //           navigation.goBack();
-  //         },
-  //       },
-  //     ]
-  //   );
-  // };
-
   const leaveCall = async () => {
+    console.log('=== LEAVE CALL INITIATED ===');
+    console.log('Current roomId:', roomId);
+    console.log('Current token exists:', !!token);
+    console.log('PeerConnection state:', peerConnection?.connectionState);
+    console.log('Local stream tracks:', localStream?.getTracks().length);
+    console.log('Active polling intervals:', {
+      answerInterval: !!pollForAnswerInterval,
+      iceCandidatesInterval: !!pollForIceCandidatesInterval
+    });
+    
     Alert.alert(
       'Leave Call',
       'Are you sure you want to leave the call?',
@@ -274,30 +423,29 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
           text: 'Leave Call',
           style: 'destructive',
           onPress: async () => {
-            try {
-              // Call leave endpoint
-              await fetch(`${SIGNALING_URL}/rooms/${roomId}/leave`, {
+            console.log('=== EXECUTING LEAVE CALL ===');
+            // 🔧 Cleanup FIRST - immediate user feedback
+            cleanupWebRTCState();
+            
+            try {              
+              console.log(`Calling leave endpoint: ${SIGNALING_URL}/rooms/${roomId}/leave`);
+              const response = await fetch(`${SIGNALING_URL}/rooms/${roomId}/leave`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json'
                 }
               });
-              
-              // Close peer connection
-              peerConnection?.close();
-              
-              // Stop local stream
-              localStream?.getTracks().forEach(track => track.stop());
-              
-              // Navigate back
-              navigation.goBack();
+              console.log('Leave endpoint response:', await response.json());
               
             } catch (error) {
-              console.error('Error leaving room:', error);
-              navigation.goBack(); // Still go back even if API call fails
+              console.error('Leave endpoint error:', error);
+              // Don't cleanup again - already done above
             }
-          },
+            
+            console.log('Navigating back...');
+            navigation.goBack();
+          }
         },
       ]
     );
