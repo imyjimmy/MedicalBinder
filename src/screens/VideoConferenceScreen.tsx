@@ -193,10 +193,46 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
       console.log('Joined room:', joinResult);
       
       // 🔧 NEW: Handle rejoin scenario
+      // if (joinResult.status === 'rejoined' || joinResult.isRejoin) {
+      //   console.log('🔄 CLIENT: Detected rejoin - resetting WebRTC state');
+        
+      //   cleanupWebRTCState();
+
+      //   // Create fresh peer connection
+      //   const freshPeerConnection = new RTCPeerConnection({
+      //     iceServers: [
+      //       { urls: 'stun:stun.l.google.com:19302' },
+      //       { urls: 'stun:stun1.l.google.com:19302' }
+      //     ]
+      //   });
+        
+      //   // Add local stream to fresh connection
+      //   if (localStream) {
+      //     freshPeerConnection.addStream(localStream);
+      //     console.log('CLIENT: Added local stream to fresh peer connection');
+      //   }
+          
+      //   setPeerConnection(freshPeerConnection);
+      //   console.log('CLIENT: ✅ Fresh peer connection created for rejoin');
+        
+      //   // Use the fresh connection for signaling
+      //   await startSignalingLoop(roomId, jwtToken, freshPeerConnection);
+      //   return;
+      // }
       if (joinResult.status === 'rejoined' || joinResult.isRejoin) {
         console.log('🔄 CLIENT: Detected rejoin - resetting WebRTC state');
         
         cleanupWebRTCState();
+
+        // 🔧 GET FRESH MEDIA STREAM FOR REJOIN
+        console.log('🎥 CLIENT: Getting fresh media stream for rejoin');
+        const freshStream = await mediaDevices.getUserMedia({video: true, audio: true});
+        console.log('🎥 CLIENT: Fresh stream obtained:', {
+          active: freshStream.active,
+          tracks: freshStream.getTracks().map(t => `${t.kind}:${t.readyState}`)
+        });
+        
+        setLocalStream(freshStream);
 
         // Create fresh peer connection
         const freshPeerConnection = new RTCPeerConnection({
@@ -206,11 +242,9 @@ export const VideoConferenceScreen: React.FC<VideoConferenceScreenProps> = ({rou
           ]
         });
         
-        // Add local stream to fresh connection
-        if (localStream) {
-          freshPeerConnection.addStream(localStream);
-          console.log('CLIENT: Added local stream to fresh peer connection');
-        }
+        // Add FRESH local stream to fresh connection
+        freshPeerConnection.addStream(freshStream);
+        console.log('CLIENT: ✅ Added fresh stream to fresh peer connection');
           
         setPeerConnection(freshPeerConnection);
         console.log('CLIENT: ✅ Fresh peer connection created for rejoin');
